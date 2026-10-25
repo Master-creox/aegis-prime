@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS PRIME — Personal AI HUD</title>
+<style>
+:root{--accent:#00e5ff;--accent2:#00ff9d;--red:#ff2d55;--bg:#02070f;--panel:#071423;--line:#123a52;--text:#dff6ff;--muted:#7fb3c8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:#04101d}
+header b{letter-spacing:2px}
+header span{color:var(--muted);font-size:13px}
+main{display:grid;grid-template-columns:190px 1fr 270px;gap:12px;padding:12px;max-width:1300px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.side button{display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:#0a1e30;color:var(--text);cursor:pointer;text-align:left;font-weight:700;letter-spacing:1px}
+.side button.active{background:var(--accent);color:#00131c}
+.orb-wrap{text-align:center;padding:10px 0}
+.orb{width:150px;height:150px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff, var(--accent) 35%, #003a5e 70%, #00121f);box-shadow:0 0 40px var(--accent);animation:pulse 3s infinite}
+.orb.listening{animation:pulse .8s infinite;box-shadow:0 0 50px var(--accent2)}
+.orb.thinking{animation:spin 1.2s linear infinite}
+.orb.terminated{background:radial-gradient(circle at 35% 35%,#888,#333 60%,#111);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes spin{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
+#stateLine{color:var(--accent2);font-weight:700;letter-spacing:2px;margin-top:10px}
+#chat{height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;background:#03101c;margin:10px 0;text-align:left}
+.msg{margin:8px 0;line-height:1.45}
+.msg b{color:var(--accent)}
+.badge{display:inline-block;font-size:11px;border:1px solid var(--accent);color:var(--accent);border-radius:20px;padding:1px 8px;margin-left:6px}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#03101c;color:var(--text);margin:6px 0}
+button.primary{background:var(--accent);border:none;color:#00131c;font-weight:800;padding:10px 16px;border-radius:8px;cursor:pointer}
+button.danger{background:transparent;border:2px solid var(--red);color:var(--red);font-weight:800;padding:9px 16px;border-radius:8px;cursor:pointer}
+.row{display:flex;gap:8px}
+.row input{flex:1}
+.skill{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0;background:#081c2e;cursor:pointer}
+.log{font-size:13px;color:var(--muted);line-height:1.5}
+.log b{color:var(--text)}
+.small{font-size:13px;color:var(--muted)}
+.agent{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
+@media(max-width:900px){main{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div><b>AEGIS PRIME</b> <span>v0.1 &bull; Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<main>
+<section class="panel side">
+<h3>CONTROL</h3>
+<button data-panel="chat" class="active">💬 CHAT</button>
+<button data-panel="memory">🧠 MEMORY</button>
+<button data-panel="skills">⚡ SKILLS</button>
+<button data-panel="character">🎭 CHARACTER</button>
+<button data-panel="setting">⚙️ SETTING</button>
+<button data-panel="agents">🤖 AGENTS</button>
+<p class="small">Video wale HUD jaisa layout: left me MEMORY / SKILLS / CHARACTER / SETTING, centre me AI core, right me live log.</p>
+</section>
+<section class="panel">
+<div class="orb-wrap">
+<div id="orb" class="orb"></div>
+<div id="stateLine">IDLE — READY</div>
+<div style="margin-top:10px" class="row">
+<button class="primary" id="wakeBtn">🎤 WAKE / LISTEN</button>
+<button class="danger" id="terminateBtn">■ TERMINATE</button>
+</div>
+</div>
+<div id="panel-chat">
+<div id="chat"></div>
+<div class="row"><input id="userInput" placeholder="Type a command… try: time, calc 12*8, password check MyPass123, remember that my laptop is at repair"><button class="primary" id="sendBtn">SEND</button></div>
+<p class="small">Try: <b>help</b> • <b>time</b> • <b>system</b> • <b>tip</b> • <b>remember that …</b> • <b>note …</b> • <b>recall …</b></p>
+</div>
+<div id="panel-memory" style="display:none"><h3>🧠 Memory</h3><div id="memoryList"></div><button class="danger" id="clearMemoryBtn">Clear all memory</button></div>
+<div id="panel-skills" style="display:none"><h3>⚡ Skills — click to run</h3>
+<div class="skill" data-skill="time">🕐 Time &amp; Date</div>
+<div class="skill" data-skill="system">💻 System Info</div>
+<div class="skill" data-skill="tip">🛡️ Cybersecurity Tip</div>
+<div class="skill" data-skill="calc">🧮 Calculator — type: calc 12*8+5</div>
+<div class="skill" data-skill="password">🔐 Password Check — type: password check YourPass123</div>
+</div>
+<div id="panel-character" style="display:none"><h3>🎭 Character</h3>
+<select id="characterSelect"><option value="friendly">Friendly — casual Hinglish</option><option value="jarvis">Formal — Jarvis style</option><option value="focus">Focus — short &amp; direct</option></select>
+<p class="small">Character sirf tone badalta hai — brain, memory aur skills wahi rehte hain.</p></div>
+<div id="panel-setting" style="display:none"><h3>⚙️ Setting</h3>
+<label>AI Name</label><input id="aiName" value="AEGIS PRIME">
+<label>Accent Colour</label><select id="accentSelect"><option value="#00e5ff">Cyan (video jaisa)</option><option value="#00ff9d">Green</option><option value="#a855f7">Purple</option></select>
+<label><input type="checkbox" id="voiceToggle" checked style="width:auto"> Speak replies aloud (if browser supports it)</label>
+<button class="primary" id="saveSettingsBtn">Save Settings</button></div>
+<div id="panel-agents" style="display:none"><h3>🤖 Agents</h3>
+<div class="agent"><b>🛡️ Guard</b> — security: password / phishing / scan words par ye agent jawab deta hai.</div>
+<div class="agent"><b>🧭 Scout</b> — planner &amp; memory: remember / note / plan words par ye agent kaam karta hai.</div>
+<div class="agent"><b>📚 Sage</b> — knowledge: what is / how / explain par ye agent samjhata hai.</div>
+<div class="agent"><b>🧠 Core</b> — baaki sab general baat-cheet Core sambhalta hai.</div>
+</div>
+</section>
+<aside class="panel">
+<h3>📡 LIVE LOG</h3><div id="log" class="log"></div>
+<h3>📊 STATUS</h3>
+<p class="small" id="statusBox"></p>
+</aside>
+</main>
+<script>
+var state='idle', terminated=false;
+var facts=JSON.parse(localStorage.getItem('aegis_facts')||'[]');
+var notes=JSON.parse(localStorage.getItem('aegis_notes')||'[]');
+function save(){localStorage.setItem('aegis_facts',JSON.stringify(facts));localStorage.setItem('aegis_notes',JSON.stringify(notes));renderMemory();renderStatus();}
+function log(t){var d=document.getElementById('log');d.innerHTML='<div><b>'+new Date().toLocaleTimeString()+'</b> — '+t+'</div>'+d.innerHTML;}
+function setState(s,txt){state=s;var o=document.getElementById('orb');o.className='orb'+(s==='idle'?'':s==='terminated'?' terminated':' '+s);document.getElementById('stateLine').textContent=txt;}
+function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;if(document.getElementById('voiceToggle').checked && 'speechSynthesis' in window){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,'')));}catch(e){}}}
+function userMsg(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>YOU:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;}
+function agentFor(q){q=q.toLowerCase();if(/password|phishing|scan|security|scam/.test(q))return 'Guard';if(/remember|note|plan|recall|yaad/.test(q))return 'Scout';if(/what is|how|explain|kya hai|kaise/.test(q))return 'Sage';return 'Core';}
+function styleReply(text){var c=document.getElementById('characterSelect').value;if(c==='jarvis')return 'Sir, '+text;if(c==='focus')return text;return text;}
+function passwordScore(p){var s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++;if(/[0-9]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;}
+function handle(raw){
+if(terminated){say('Session terminated hai. Wake dabao, phir se start karte hain.');return;}
+var q=raw.trim();if(!q)return;userMsg(q);log('Message → Agent: '+agentFor(q));setState('thinking','THINKING…');
+setTimeout(function(){
+var agent=agentFor(q), low=q.toLowerCase(), reply='';
+if(low==='help'){reply='Commands: time, system, tip, calc 12*8, password check &lt;pass&gt;, remember that X is Y, recall X, note &lt;text&gt;, clear chat nahi — memory panel se clear karo.';}
+else if(/^(time|samay|date)/.test(low)){reply='Abhi ka time: '+new Date().toLocaleString('en-IN');}
+else if(low.indexOf('system')===0){reply='Browser: '+navigator.userAgent.split(')')[0]+') | Language: '+navigator.language+' | Online: '+navigator.onLine+' | Saved facts: '+facts.length+' | Notes: '+notes.length;}
+else if(low.indexOf('tip')===0){var tips=['Kabhi bhi OTP kisi se share mat karo — bank kabhi OTP nahi maangta.','Unknown link par click karne se pehle URL dhyaan se padho — typosquat domain common scam hai.','Har important account par 2FA on rakho, aur password manager use karo.'];reply='🛡️ Tip: '+tips[Math.floor(Math.random()*tips.length)];}
+else if(low.indexOf('calc ')===0){var expr=low.slice(5).replace(/[^0-9+\-*/(). ]/g,'');try{reply='🧮 '+expr+' = '+(Function('return ('+expr+')')());}catch(e){reply='Calc samajh nahi aaya. Example: calc 12*8+5';}}
+else if(low.indexOf('password check ')===0){var p=q.slice(15).trim(), s=passwordScore(p);reply='🔐 Password score: '+s+'/5. '+(s>=4?'Strong lag raha hai.':s>=2?'Medium hai — lamba karo aur symbol + number add karo.':'Weak hai — kam se kam 12 characters, upper + lower + number + symbol rakho.');}
+else if(/remember that |yaad rakho /.test(low)){var f=q.replace(/.*?(remember that |yaad rakho )/i,'');facts.push(f);save();reply='🧠 Yaad rakh liya: '+f;}
+else if(low.indexOf('recall ')===0||low.indexOf('what is ')===0){var key=low.replace(/recall |what is /,'');var hit=facts.find(function(f){return f.toLowerCase().indexOf(key)>=0;});reply=hit?('🧠 Memory me mila: '+hit):'Is baare me memory me kuch nahi mila. Pehle "remember that …" se save karo.';}
+else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 Note save ho gaya.';}
+else if(agent==='Guard'){reply='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';}
+else if(agent==='Sage'){reply='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';}
+else{reply='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';}
+say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);setState('idle','IDLE — READY');
+},400);
+}
+function renderMemory(){var el=document.getElementById('memoryList');el.innerHTML='<b>Facts:</b><br>'+(facts.length?facts.map(function(f){return '• '+f;}).join('<br>'):'(koi fact save nahi)')+'<br><br><b>Notes:</b><br>'+(notes.length?notes.map(function(n){return '• '+n;}).join('<br>'):'(koi note nahi)');}
+function renderStatus(){document.getElementById('statusBox').innerHTML='Facts: '+facts.length+'<br>Notes: '+notes.length+'<br>Character: '+document.getElementById('characterSelect').value+'<br>Voice: '+(document.getElementById('voiceToggle').checked?'ON':'OFF');}
+document.querySelectorAll('.side button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.side button').forEach(function(x){x.classList.remove('active');});b.classList.add('active');['chat','memory','skills','character','setting','agents'].forEach(function(p){document.getElementById('panel-'+p).style.display=(p===b.dataset.panel?'block':'none');});log('Panel khola: '+b.dataset.panel);};});
+document.querySelectorAll('.skill').forEach(function(s){s.onclick=function(){handle(s.dataset.skill==='calc'?'calc 12*8+5':s.dataset.skill==='password'?'password check DemoPass123!':s.dataset.skill);};});
+document.getElementById('sendBtn').onclick=function(){var v=document.getElementById('userInput').value;document.getElementById('userInput').value='';handle(v);};
+document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=e.target.value;e.target.value='';handle(v);}});
+document.getElementById('terminateBtn').onclick=function(){terminated=true;if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
+document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
+document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved');};
+setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
+renderMemory();renderStatus();log('AEGIS PRIME started — v0.1');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+</script>
+</body>
+</html>
