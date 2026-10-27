@@ -225,7 +225,7 @@ var creoxBrain=localStorage.getItem('aegis_creox_brain')==='1';
 var creoxSessionId=null;try{var _s=localStorage.getItem('aegis_creox_session_id');creoxSessionId=_s?JSON.parse(_s):null;}catch(e){creoxSessionId=null;}
 function creoxBaseUrl(){return creoxBase.replace(/\/$/,'');}
 function creoxBrainOn(){return creoxBrain && !!creoxKey;}
-function creoxStatusText(){if(!creoxBrain)return 'Brain: OFF — rule-based replies only.';if(!creoxKey)return 'Brain: ON, par koi key saved nahi hai — key save karo, tabhi CreoX brain chalega.';return 'Brain: ON — CreoX API (key saved, key kabhi dikhayi nahi jaati).';}
+function creoxStatusText(){if(!creoxBrain)return t('creoxStatusOff');if(!creoxKey)return t('creoxStatusOnNoKey');return t('creoxStatusOn');}
 function creoxRefreshStatus(){var el=document.getElementById('creoxStatus');if(el)el.textContent=creoxStatusText();}
 async function askCreoxBrain(q){
   var ctrl=new AbortController();
@@ -242,17 +242,17 @@ async function askCreoxBrain(q){
   }finally{clearTimeout(timer);}
 }
 function testCreoxConnection(){
-  var el=document.getElementById('creoxStatus');if(el)el.textContent='Testing connection… (Render sleep ho to ~1 min lag sakta hai)';
+  var el=document.getElementById('creoxStatus');if(el)el.textContent=t('creoxTesting');
   var ctrl=new AbortController();var timer=setTimeout(function(){ctrl.abort();},90000);
   fetch(creoxBaseUrl()+'/api/v1/models',{headers:{'X-API-Key':creoxKey},signal:ctrl.signal}).then(function(res){
     clearTimeout(timer);
     if(!res.ok)throw new Error(res.status+' '+res.statusText);
-    if(el)el.textContent='Connection OK — models endpoint reachable. '+creoxStatusText();
+    if(el)el.textContent=t('creoxTestOk')+creoxStatusText();
     log('CreoX connection test OK');
   }).catch(function(e){
     clearTimeout(timer);
     var reason=(e.name==='AbortError')?'timeout (90s)':(e.message||'network error');
-    if(el)el.textContent='Connection failed ('+reason+') — key/base URL check karo. Key kabhi log nahi hoti.';
+    if(el)el.textContent=t('creoxTestFailPrefix')+reason+t('creoxTestFailSuffix');
     log('CreoX connection test failed ('+reason+')');
   });
 }
@@ -416,6 +416,93 @@ function speakClean(clean,est){
     return true;
   }catch(e){startLipSync();setTimeout(function(){stopLipSync();},est);return false;}
 }
+/* v0.7.3 PURE-language system replies: Hindi matlab Hindi, English matlab English.
+   Reply language follows the Language dropdown (piperLangMode): 'hi' -> Hindi,
+   anything else (including Auto) -> English for system replies. Auto defaults to
+   English because the CreoX brain answers in English. This dictionary covers
+   SYSTEM messages only (spoken/chat replies + Settings status fields). The
+   CreoX brain's own replies, user chat text, and LIVE LOG lines are NOT
+   translated here — see README. Command keywords (help, time, calc,
+   password check, remember that, recall, note) are literal commands and are
+   never translated. Proper names (AEGIS PRIME, CreoX) stay as-is. */
+var PURELANG = {
+  en: {
+    settingsSaved: 'Settings saved. AI name: ',
+    memoryCleared: 'Memory cleared.',
+    memoryFound: 'Found in memory: ',
+    memoryNotFound: 'Nothing found on this topic in memory. First save it with "remember that …".',
+    rememberSaved: 'Remembered: ',
+    noteSaved: 'Note saved.',
+    sessionTerminated: 'Session terminated. Press Wake to start again.',
+    terminatedRestart: 'Session terminated. Press Wake to restart.',
+    voiceNotHeard: 'I could not hear your voice. Please type your message.',
+    voiceNotSupported: 'Voice is not supported in this browser. Please type your command.',
+    voiceNotSupportedListening: 'Voice is not supported in this browser — please type your command. I am listening.',
+    voiceTestNotSupported: 'Voice is not supported in this browser, so I could not speak the test.',
+    confirmClearMemory: 'Clear all memory?',
+    brainEmptyReply: 'The CreoX brain gave an empty reply, so I am giving a rule-based reply. Type "help" to see all working commands.',
+    ruleBasedFallback: 'Understood. I am currently running on a rule-based demo brain — not a real LLM. Type "help" to see all working commands.',
+    fallbackGuard: 'Guard: This is a security question. Basic rule — do not open unknown links or attachments, do not share your OTP, and for a password check type "password check <pass>". (This is a demo brain. It does not run a real threat scan.)',
+    fallbackSagePrefix: 'Sage: "',
+    fallbackSageSuffix: '" — a short answer: this topic is not covered in detail in my built-in knowledge, so I will not guess. Try a specific command: help, tip, system, or time.',
+    helpReply: 'Commands: time, system, tip, calc 12*8, password check <pass>, remember that X is Y, recall X, note <text>. Chat is not cleared from here — clear it from the memory panel.',
+    creoxStatusOff: 'Brain: OFF — rule-based replies only.',
+    creoxStatusOnNoKey: 'Brain: ON, but no key is saved — save a key first, then the CreoX brain will work.',
+    creoxStatusOn: 'Brain: ON — CreoX API (key saved, key is never shown).',
+    creoxTesting: 'Testing connection… (If the Render service is asleep, it may take about 1 minute)',
+    creoxTestOk: 'Connection OK — models endpoint reachable. ',
+    creoxTestFailPrefix: 'Connection failed (',
+    creoxTestFailSuffix: ') — check the key and base URL. The key is never logged.',
+    piperBridgeMissing: 'Piper bridge not found — Piper runs only in the Electron app, not in Chrome file-open. Speaking with the system voice.',
+    piperTesting: 'Piper test running… (The first run may take a little time while the model loads)',
+    piperTestOk: 'Piper test OK — local neural voice is running.',
+    piperTestFailPrefix: 'Piper test failed: ',
+    piperTestFailSuffix: ' — system voice fallback.',
+    piperHindiTesting: 'Piper Hindi test running… (The first run may take a little time while the model loads)',
+    piperHindiTestOk: 'Piper Hindi test OK — Hindi model is running.',
+    piperHindiTestFailPrefix: 'Piper Hindi test failed: ',
+    piperHindiTestFailSuffix: ' — system voice fallback.'
+  },
+  hi: {
+    settingsSaved: 'सेटिंग्स सहेजी गईं। AI का नाम: ',
+    memoryCleared: 'मेमोरी साफ़ हो गई।',
+    memoryFound: 'मेमोरी में मिला: ',
+    memoryNotFound: 'इस विषय के बारे में मेमोरी में कुछ नहीं मिला। पहले "remember that …" से सहेजें।',
+    rememberSaved: 'याद रख लिया: ',
+    noteSaved: 'नोट सहेजा गया।',
+    sessionTerminated: 'सत्र समाप्त हो गया। दोबारा शुरू करने के लिए Wake दबाएँ।',
+    terminatedRestart: 'सत्र समाप्त हो गया। दोबारा शुरू करने के लिए Wake दबाएँ।',
+    voiceNotHeard: 'आपकी आवाज़ सुनाई नहीं दी। कृपया टाइप करके भेजें।',
+    voiceNotSupported: 'इस ब्राउज़र में आवाज़ समर्थित नहीं है। कृपया टाइप करके कमांड भेजें।',
+    voiceNotSupportedListening: 'इस ब्राउज़र में आवाज़ समर्थित नहीं है — कृपया टाइप करके कमांड भेजें। मैं सुन रहा हूँ।',
+    voiceTestNotSupported: 'इस ब्राउज़र में आवाज़ समर्थित नहीं है, इसलिए परीक्षण नहीं बोल पाया।',
+    confirmClearMemory: 'सारी मेमोरी साफ़ कर दूँ?',
+    brainEmptyReply: 'CreoX ब्रेन ने खाली उत्तर दिया, इसलिए मैं नियम-आधारित उत्तर दे रहा हूँ। सभी काम करने वाले कमांड देखने के लिए "help" लिखें।',
+    ruleBasedFallback: 'समझ गया। मैं अभी नियम-आधारित डेमो ब्रेन पर चल रहा हूँ — असली LLM नहीं हूँ। सभी काम करने वाले कमांड देखने के लिए "help" लिखें।',
+    fallbackGuard: 'Guard: यह सुरक्षा से जुड़ा प्रश्न है। बुनियादी नियम — अज्ञात लिंक या अटैचमेंट न खोलें, अपना OTP साझा न करें, और पासवर्ड जाँच के लिए "password check <pass>" लिखें। (यह डेमो ब्रेन है। यह असली खतरा स्कैन नहीं करता।)',
+    fallbackSagePrefix: 'Sage: "',
+    fallbackSageSuffix: '" — संक्षिप्त उत्तर: यह विषय मेरे बने हुए ज्ञान में विस्तार से नहीं है, इसलिए मैं अनुमान नहीं लगाऊँगा। कोई विशिष्ट कमांड आज़माएँ: help, tip, system, या time।',
+    helpReply: 'कमांड: time, system, tip, calc 12*8, password check <pass>, remember that X is Y, recall X, note <text>। चैट यहाँ से साफ़ नहीं होती — मेमोरी पैनल से साफ़ करें।',
+    creoxStatusOff: 'ब्रेन: बंद — केवल नियम-आधारित उत्तर।',
+    creoxStatusOnNoKey: 'ब्रेन: चालू है, पर कोई key सहेजी नहीं है — पहले key सहेजें, तभी CreoX ब्रेन चलेगा।',
+    creoxStatusOn: 'ब्रेन: चालू — CreoX API (key सहेजी हुई है, key कभी दिखाई नहीं जाती)।',
+    creoxTesting: 'कनेक्शन जाँचा जा रहा है… (Render सेवा सो रही हो तो लगभग 1 मिनट लग सकता है)',
+    creoxTestOk: 'कनेक्शन ठीक है — models endpoint तक पहुँच हो गई। ',
+    creoxTestFailPrefix: 'कनेक्शन विफल हुआ (',
+    creoxTestFailSuffix: ') — key और base URL जाँचें। key कभी log नहीं होती।',
+    piperBridgeMissing: 'Piper bridge नहीं मिला — Piper केवल Electron ऐप में चलता है, Chrome file-open में नहीं। सिस्टम आवाज़ से बोल रहा हूँ।',
+    piperTesting: 'Piper परीक्षण चल रहा है… (पहली बार मॉडल लोड होने में थोड़ा समय लग सकता है)',
+    piperTestOk: 'Piper परीक्षण ठीक है — स्थानीय न्यूरल आवाज़ चल रही है।',
+    piperTestFailPrefix: 'Piper परीक्षण विफल हुआ: ',
+    piperTestFailSuffix: ' — सिस्टम आवाज़ से बोल रहा हूँ।',
+    piperHindiTesting: 'Piper हिंदी परीक्षण चल रहा है… (पहली बार मॉडल लोड होने में थोड़ा समय लग सकता है)',
+    piperHindiTestOk: 'Piper हिंदी परीक्षण ठीक है — हिंदी मॉडल चल रहा है।',
+    piperHindiTestFailPrefix: 'Piper हिंदी परीक्षण विफल हुआ: ',
+    piperHindiTestFailSuffix: ' — सिस्टम आवाज़ से बोल रहा हूँ।'
+  }
+};
+function replyLang(){var m='auto';try{var el=document.getElementById('piperLangMode');if(el&&el.value)m=el.value;else if(typeof aegisPiperLangMode!=='undefined'&&aegisPiperLangMode)m=aegisPiperLangMode;}catch(e){}return m==='hi'?'hi':'en';}
+function t(key){var d=PURELANG[replyLang()]||PURELANG.en;return (d[key]!==undefined)?d[key]:PURELANG.en[key];}
 function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;var clean=text.replace(/<[^>]*>/g,'');var est=Math.max(1200,Math.min(8000,clean.length*70));if(document.getElementById('voiceToggle').checked){if(!speakWithEngine(clean,est)){startLipSync();setTimeout(function(){stopLipSync();},est);}}else{startLipSync();setTimeout(function(){stopLipSync();},est);}}
 /* v0.4 blinking: every ~3-5s, eyelids shut for ~150ms (skipped while terminated) */
 (function blinkLoop(){setTimeout(function(){var o=document.getElementById('orb');if(!o.classList.contains('terminated')){o.classList.add('blinking');setTimeout(function(){o.classList.remove('blinking');},150);}blinkLoop();},3000+Math.random()*2000);})();
@@ -424,43 +511,43 @@ function agentFor(q){q=q.toLowerCase();if(/password|phishing|scan|security|scam/
 function styleReply(text){var c=document.getElementById('characterSelect').value;if(c==='jarvis')return 'Sir, '+text;if(c==='focus')return text;return text;}
 function passwordScore(p){var s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++;if(/[0-9]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;}
 function handle(raw){
-if(terminated){say('Session terminated hai. Wake dabao, phir se start karte hain.');return;}
+if(terminated){say(t('sessionTerminated'));return;}
 var q=raw.trim();if(!q)return;userMsg(q);log('Message → Agent: '+agentFor(q));setState('thinking','THINKING…');
 setTimeout(function(){
 var agent=agentFor(q), low=q.toLowerCase(), reply='';
-if(low.indexOf('what is ')===0){var _k=low.replace('what is ','');var _hit=facts.find(function(f){return f.toLowerCase().indexOf(_k)>=0;});if(_hit){say('<span class="badge">Scout</span> '+styleReply('🧠 Memory me mila: '+_hit));log('Reply via local memory');setState('idle','IDLE — READY');return;}}
+if(low.indexOf('what is ')===0){var _k=low.replace('what is ','');var _hit=facts.find(function(f){return f.toLowerCase().indexOf(_k)>=0;});if(_hit){say('<span class="badge">Scout</span> '+styleReply('🧠 '+t('memoryFound')+_hit));log('Reply via local memory');setState('idle','IDLE — READY');return;}}
 if(!isLocalCommand(low) && creoxBrainOn()){
   setState('thinking','THINKING — CREOX BRAIN…');
   log('CreoX brain se pooch raha hoon… (Render sleep ho to pehli request ~1 min lag sakti hai)');
   askCreoxBrain(q).then(function(brainReply){
     if(brainReply){say('<span class="badge">Core</span> '+styleReply(brainReply)+' <span class="small">via CreoX brain</span>');log('Reply via CreoX brain');}
-    else{say('<span class="badge">Core</span> '+styleReply('CreoX brain ne khaali jawab diya, isliye rule-based jawab de raha hoon. "help" likho, saare working commands dikh jayenge.'));log('CreoX brain ne khaali jawab diya — rule-based reply used');}
+    else{say('<span class="badge">Core</span> '+styleReply(t('brainEmptyReply')));log('CreoX brain ne khaali jawab diya — rule-based reply used');}
     setState('idle','IDLE — READY');
   }).catch(function(err){
     var reason=(err&&err.message)?err.message:'network error';
     log('CreoX brain unavailable ('+reason+') — rule-based reply used');
     var fbAgent=agentFor(q), fb='';
-    if(fbAgent==='Guard')fb='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';
-    else if(fbAgent==='Sage')fb='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';
-    else fb='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';
+    if(fbAgent==='Guard')fb='🛡️ '+t('fallbackGuard');
+    else if(fbAgent==='Sage')fb='📚 '+t('fallbackSagePrefix')+q+t('fallbackSageSuffix');
+    else fb=t('ruleBasedFallback');
     say('<span class="badge">'+fbAgent+'</span> '+styleReply(fb));
     if(fbAgent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry'+(_o.classList.contains('speaking')?' speaking':'');document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}
     else{setState('idle','IDLE — READY');}
   });
   return;
 }
-if(low==='help'){reply='Commands: time, system, tip, calc 12*8, password check &lt;pass&gt;, remember that X is Y, recall X, note &lt;text&gt;, clear chat nahi — memory panel se clear karo.';}
+if(low==='help'){reply=t('helpReply');}
 else if(/^(time|samay|date)/.test(low)){reply='Abhi ka time: '+new Date().toLocaleString('en-IN');}
 else if(low.indexOf('system')===0){reply='Browser: '+navigator.userAgent.split(')')[0]+') | Language: '+navigator.language+' | Online: '+navigator.onLine+' | Saved facts: '+facts.length+' | Notes: '+notes.length;}
 else if(low.indexOf('tip')===0){var tips=['Kabhi bhi OTP kisi se share mat karo — bank kabhi OTP nahi maangta.','Unknown link par click karne se pehle URL dhyaan se padho — typosquat domain common scam hai.','Har important account par 2FA on rakho, aur password manager use karo.'];reply='🛡️ Tip: '+tips[Math.floor(Math.random()*tips.length)];}
 else if(low.indexOf('calc ')===0){var expr=low.slice(5).replace(/[^0-9+\-*/(). ]/g,'');try{reply='🧮 '+expr+' = '+(Function('return ('+expr+')')());}catch(e){reply='Calc samajh nahi aaya. Example: calc 12*8+5';}}
 else if(low.indexOf('password check ')===0){var p=q.slice(15).trim(), s=passwordScore(p);reply='🔐 Password score: '+s+'/5. '+(s>=4?'Strong lag raha hai.':s>=2?'Medium hai — lamba karo aur symbol + number add karo.':'Weak hai — kam se kam 12 characters, upper + lower + number + symbol rakho.');}
-else if(/remember that |yaad rakho /.test(low)){var f=q.replace(/.*?(remember that |yaad rakho )/i,'');facts.push(f);save();reply='🧠 Yaad rakh liya: '+f;}
-else if(low.indexOf('recall ')===0){var key=low.replace(/recall /,'');var hit=facts.find(function(f){return f.toLowerCase().indexOf(key)>=0;});reply=hit?('🧠 Memory me mila: '+hit):'Is baare me memory me kuch nahi mila. Pehle "remember that …" se save karo.';}
-else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 Note save ho gaya.';}
-else if(agent==='Guard'){reply='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';}
-else if(agent==='Sage'){reply='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';}
-else{reply='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';}
+else if(/remember that |yaad rakho /.test(low)){var f=q.replace(/.*?(remember that |yaad rakho )/i,'');facts.push(f);save();reply='🧠 '+t('rememberSaved')+f;}
+else if(low.indexOf('recall ')===0){var key=low.replace(/recall /,'');var hit=facts.find(function(f){return f.toLowerCase().indexOf(key)>=0;});reply=hit?('🧠 '+t('memoryFound')+hit):t('memoryNotFound');}
+else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 '+t('noteSaved');}
+else if(agent==='Guard'){reply='🛡️ '+t('fallbackGuard');}
+else if(agent==='Sage'){reply='📚 '+t('fallbackSagePrefix')+q+t('fallbackSageSuffix');}
+else{reply=t('ruleBasedFallback');}
 say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);if(agent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry'+(_o.classList.contains('speaking')?' speaking':'');document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}else{setState('idle','IDLE — READY');}
 },400);
 }
@@ -470,15 +557,15 @@ document.querySelectorAll('.side button').forEach(function(b){b.onclick=function
 document.querySelectorAll('.skill').forEach(function(s){s.onclick=function(){handle(s.dataset.skill==='calc'?'calc 12*8+5':s.dataset.skill==='password'?'password check DemoPass123!':s.dataset.skill);};});
 document.getElementById('sendBtn').onclick=function(){var v=document.getElementById('userInput').value;document.getElementById('userInput').value='';handle(v);};
 document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=e.target.value;e.target.value='';handle(v);}});
-document.getElementById('terminateBtn').onclick=function(){terminated=true;stopPiperAudio();stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
-document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
-document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
-document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;aegisPiperModelHi=document.getElementById('piperModelHi').value.trim()||aegisPiperModelHi;aegisPiperLangMode=document.getElementById('piperLangMode').value||'auto';localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);localStorage.setItem('aegis_piper_model_hi',aegisPiperModelHi);localStorage.setItem('aegis_piper_lang_mode',aegisPiperLangMode);}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
+document.getElementById('terminateBtn').onclick=function(){terminated=true;stopPiperAudio();stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say(t('terminatedRestart'));log('TERMINATE dabaya gaya');};
+document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say(t('voiceNotHeard'));};R.start();}catch(e){setState('idle','IDLE — READY');say(t('voiceNotSupported'));}}else{setState('idle','IDLE — READY');say(t('voiceNotSupportedListening'));}};
+document.getElementById('clearMemoryBtn').onclick=function(){if(confirm(t('confirmClearMemory'))){facts=[];notes=[];save();say(t('memoryCleared'));}};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;aegisPiperModelHi=document.getElementById('piperModelHi').value.trim()||aegisPiperModelHi;aegisPiperLangMode=document.getElementById('piperLangMode').value||'auto';localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);localStorage.setItem('aegis_piper_model_hi',aegisPiperModelHi);localStorage.setItem('aegis_piper_lang_mode',aegisPiperLangMode);}catch(e){}creoxRefreshStatus();renderStatus();say(t('settingsSaved')+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
 document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.getElementById('creoxBase').value.trim()||creoxBase;creoxKey=document.getElementById('creoxKey').value;testCreoxConnection();};
 document.getElementById('voiceSelect').onchange=function(){aegisVoiceName=this.value;};
 document.getElementById('voiceRate').oninput=function(){aegisVoiceRate=parseFloat(this.value)||0.95;document.getElementById('voiceRateVal').textContent=this.value;};
 document.getElementById('voicePitch').oninput=function(){aegisVoicePitch=parseFloat(this.value)||1.05;document.getElementById('voicePitchVal').textContent=this.value;};
-document.getElementById('voiceTestBtn').onclick=function(){var s='Good morning, I am AEGIS PRIME. This is my new voice.';if(!speakClean(s,4000)){say('Voice is browser me supported nahi hai, isliye test nahi bol paya.');}else{log('Voice test played');}};
+document.getElementById('voiceTestBtn').onclick=function(){var s='Good morning, I am AEGIS PRIME. This is my new voice.';if(!speakClean(s,4000)){say(t('voiceTestNotSupported'));}else{log('Voice test played');}};
 if('speechSynthesis' in window){try{speechSynthesis.onvoiceschanged=populateVoices;}catch(e){}}
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
 renderMemory();renderStatus();
@@ -486,27 +573,27 @@ renderMemory();renderStatus();
 document.getElementById('piperTestBtn').onclick=function(){
   var s='Good morning, I am AEGIS PRIME. This is my Piper local voice.';
   var st=document.getElementById('piperStatus');
-  if(!piperBridge()){if(st)st.textContent='Piper bridge nahi mila — Piper sirf Electron app me chalta hai, Chrome file-open me nahi. System voice se bol raha hoon.';log('Piper test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
-  if(st)st.textContent='Piper test chal raha hai… (pehli baar model load hone me thoda time lag sakta hai)';
+  if(!piperBridge()){if(st)st.textContent=t('piperBridgeMissing');log('Piper test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
+  if(st)st.textContent=t('piperTesting');
   speakViaPiper(s,4000,piperEnglishModel()).then(function(r){
-    if(r.ok){if(st)st.textContent='Piper test OK — local neural voice chal rahi hai.';log('Piper test OK');}
-    else{if(st)st.textContent='Piper test fail: '+r.error+' — system voice fallback.';log('Piper test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
+    if(r.ok){if(st)st.textContent=t('piperTestOk');log('Piper test OK');}
+    else{if(st)st.textContent=t('piperTestFailPrefix')+r.error+t('piperTestFailSuffix');log('Piper test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
   });
 };
 document.getElementById('piperTestHiBtn').onclick=function(){
   var s='नमस्ते, मैं AEGIS PRIME हूँ। यह मेरी हिंदी आवाज़ है।';
   var st=document.getElementById('piperStatus');
-  if(!piperBridge()){if(st)st.textContent='Piper bridge nahi mila — Piper sirf Electron app me chalta hai, Chrome file-open me nahi. System voice se bol raha hoon.';log('Piper Hindi test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
-  if(st)st.textContent='Piper Hindi test chal raha hai… (pehli baar model load hone me thoda time lag sakta hai)';
+  if(!piperBridge()){if(st)st.textContent=t('piperBridgeMissing');log('Piper Hindi test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
+  if(st)st.textContent=t('piperHindiTesting');
   speakViaPiper(s,4000,piperHindiModel()).then(function(r){
-    if(r.ok){if(st)st.textContent='Piper Hindi test OK — Hindi model chal raha hai.';log('Piper Hindi test OK');}
-    else{if(st)st.textContent='Piper Hindi test fail: '+r.error+' — system voice fallback.';log('Piper Hindi test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
+    if(r.ok){if(st)st.textContent=t('piperHindiTestOk');log('Piper Hindi test OK');}
+    else{if(st)st.textContent=t('piperHindiTestFailPrefix')+r.error+t('piperHindiTestFailSuffix');log('Piper Hindi test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
   });
 };
 document.getElementById('voiceEngine').onchange=function(){aegisVoiceEngine=this.value;};
 document.getElementById('piperLangMode').onchange=function(){aegisPiperLangMode=this.value;};
 (function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;var pmh=document.getElementById('piperModelHi');if(pmh)pmh.value=aegisPiperModelHi;var plm=document.getElementById('piperLangMode');if(plm)plm.value=aegisPiperLangMode;populateVoices();})();
-log('AEGIS PRIME started — v0.7.2 GREETING');if(aegisPiperLangMode==='hi'){say('नमस्ते! मैं AEGIS PRIME हूँ। "help" लिखो, या sidebar से MEMORY, SKILLS, CHARACTER, SETTING खोलो।');}else{say('Good morning! I am AEGIS PRIME. Type "help", or open MEMORY, SKILLS, CHARACTER, SETTING from the sidebar.');}
+log('AEGIS PRIME started — v0.7.3 PURELANG');if(aegisPiperLangMode==='hi'){say('नमस्ते! मैं AEGIS PRIME हूँ। "help" लिखो, या sidebar से MEMORY, SKILLS, CHARACTER, SETTING खोलो।');}else{say('Good morning! I am AEGIS PRIME. Type "help", or open MEMORY, SKILLS, CHARACTER, SETTING from the sidebar.');}
 </script>
 </body>
 </html>

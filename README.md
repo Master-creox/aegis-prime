@@ -1,3 +1,34 @@
+## v0.7.3 PURE-language system replies (2026-10-27)
+
+Akash's principle, stated twice: "Hindi matlab Hindi hota hai, English matlab
+English hota hai" — no Hinglish mixing in system replies.
+
+- Reply language follows the Language dropdown (piperLangMode): 'hi' -> pure
+  Devanagari Hindi, anything else (including Auto) -> pure English. Auto
+  defaults to English for system replies because the CreoX brain answers in
+  English.
+- A PURELANG dictionary (en/hi pairs) plus a t(key) helper is wired into the
+  spoken/chat system messages: settings saved, memory saved/cleared/found/
+  not-found, session terminated / wake, voice not heard / not supported,
+  voice test not supported, confirm-clear-memory, brain empty reply,
+  rule-based fallback, Guard/Sage fallback, help reply, CreoX status /
+  connection test, and Piper bridge/test status. Command keywords (help,
+  time, calc, password check, remember that, recall, note) are literal
+  commands and are never translated; proper names (AEGIS PRIME, CreoX) and
+  technical terms stay as-is.
+- Startup greeting (v0.7.2) is unchanged: Good Morning in English mode,
+  Namaste in Devanagari in Hindi mode. Test button texts (v0.7.2) are
+  unchanged.
+- DELIBERATE SCOPE LIMITS (not bugs): (1) The CreoX brain's own replies are
+  NOT translated — in Hindi mode they still arrive in English, with a Hindi
+  system intro where applicable, because the brain has no Hindi KB; full
+  Hindi brain answers are a later KB phase. (2) LIVE LOG lines keep their
+  existing style and are not localized. (3) Skill content replies (time,
+  tip, calc result, password score, system info) and the character tone
+  prefix (jarvis "Sir, ") are unchanged. (4) The static initial
+  creoxStatus HTML line is overwritten by creoxRefreshStatus() on startup
+  with the localized text.
+
 ## v0.7.2 greeting (2026-10-27)
 
 Language-correct greetings: English mode/test buttons say 'Good morning, I am AEGIS PRIME...' in English; Hindi mode/test says 'Namaste' in Devanagari Hindi. Startup greeting follows the Language dropdown (Hindi always -> Namaste in Devanagari, otherwise Good Morning in English).
