@@ -1,4 +1,4 @@
-# AEGIS PRIME — Personal AI HUD (v0.2 redesign)
+# AEGIS PRIME — Personal AI HUD (v0.3 character)
 
 A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic AI" Reel Akash shared on 2026-10-25 — built as original code, not a copy of that creator's project. Open `index.html` in any modern browser. No server, no API key, no install needed. Chat, memory and notes are stored only in the browser's localStorage on the user's own device.
 
@@ -19,6 +19,18 @@ A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic 
 
 1. Open `index.html`.
 2. Type `help`, then try: `time`, `calc 12*8`, `password check MyPass123`, `remember that my laptop is at repair`, `recall laptop`, `tip`, `system`.
+
+## v0.3 character (2026-10-27)
+
+The orb is replaced, in the same centred spot, by an original inline-SVG
+anime swordsman character — no binary image, no external artwork, and no
+copy of any Demon Slayer character (no forehead mark, no earrings, no
+patterned haori). Expressions switch with the state: idle (calm),
+listening (wide eyes, green glow), thinking (glancing eyes, sparkle),
+terminated (grey, eyes closed), and angry/Guard (angled brows, red glow)
+for about 1.8 seconds when a reply is routed to the Guard agent. All other
+features are unchanged from v0.2. This is a stylised SVG illustration,
+not anime artwork — it will look simpler than reference anime images.
 
 ## v0.2 redesign (2026-10-27)
 

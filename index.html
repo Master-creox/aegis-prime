@@ -20,12 +20,28 @@ main{display:grid;grid-template-columns:212px 1fr 308px;gap:14px;padding:14px;he
 .side button:hover{border-color:var(--accent);box-shadow:0 0 14px rgba(0,229,255,.25)}
 .side button.active{background:var(--accent);color:#00131c;box-shadow:0 0 22px rgba(0,229,255,.55)}
 .orb-wrap{text-align:center;padding:6px 0 12px}
-.orb-ring{width:216px;height:216px;margin:0 auto;border-radius:50%;padding:10px;background:conic-gradient(from 0deg,var(--accent),transparent 30%,var(--accent2),transparent 65%,var(--accent));animation:ringspin 9s linear infinite}
+.orb-ring{width:224px;height:224px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(0,229,255,.20),transparent 70%)}
 @keyframes ringspin{to{transform:rotate(360deg)}}
-.orb{width:196px;height:196px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 32%,#ffffff, var(--accent) 38%, #003a5e 72%, #00121f);box-shadow:0 0 55px var(--accent),inset 0 0 30px rgba(255,255,255,.35);animation:pulse 3s infinite}
-.orb.listening{animation:pulse .8s infinite;box-shadow:0 0 65px var(--accent2)}
-.orb.thinking{animation:spin 1.2s linear infinite}
-.orb.terminated{background:radial-gradient(circle at 35% 35%,#888,#333 60%,#111);box-shadow:none;animation:none}
+.orb{width:200px;height:214px;margin:0 auto;animation:pulse 3s infinite}
+.orb svg{width:200px;height:214px;display:block;filter:drop-shadow(0 0 18px rgba(0,229,255,.45))}
+.orb.listening{animation:pulse .8s infinite}
+.orb.listening svg{filter:drop-shadow(0 0 26px rgba(0,255,157,.75))}
+.orb.thinking{animation:pulse 1.4s infinite}
+.orb.thinking svg{filter:drop-shadow(0 0 22px rgba(0,229,255,.65))}
+.orb.terminated{animation:none}
+.orb.terminated svg{filter:grayscale(1) brightness(.55) drop-shadow(0 0 6px rgba(120,120,120,.4))}
+.orb.angry{animation:pulse .6s infinite}
+.orb.angry svg{filter:drop-shadow(0 0 26px rgba(255,45,85,.85))}
+/* Expression switching: only one face group is visible at a time */
+.orb .expr-listening,.orb .expr-thinking,.orb .expr-terminated,.orb .expr-angry{display:none}
+.orb.listening .expr-idle{display:none}
+.orb.listening .expr-listening{display:inline}
+.orb.thinking .expr-idle{display:none}
+.orb.thinking .expr-thinking{display:inline}
+.orb.terminated .expr-idle{display:none}
+.orb.terminated .expr-terminated{display:inline}
+.orb.angry .expr-idle{display:none}
+.orb.angry .expr-angry{display:inline}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes spin{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
 #stateLine{color:var(--accent2);font-weight:800;letter-spacing:3px;margin-top:14px;font-size:14px}
@@ -48,7 +64,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span class="pill">v0.2 &bull; REDESIGN</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.3 &bull; CHARACTER</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -62,7 +78,65 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </section>
 <section class="panel">
 <div class="orb-wrap"><div class="small" style="letter-spacing:3px">● AI CORE &nbsp;•&nbsp; LIVE HUD</div>
-<div class="orb-ring"><div id="orb" class="orb"></div></div>
+<div class="orb-ring"><div id="orb" class="orb"><svg viewBox="0 0 200 214" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aegis Prime swordsman character">
+<!-- sword hilt over the shoulder (plain, no copied detail) -->
+<g><rect x="152" y="8" width="10" height="42" rx="4" transform="rotate(28 157 29)" fill="#8a6a2f"/><circle cx="150" cy="52" r="9" fill="#d8b25a"/><rect x="138" y="58" width="10" height="30" rx="3" transform="rotate(28 143 73)" fill="#4a3520"/></g>
+<!-- cloak: plain dark crimson, no pattern -->
+<path d="M28 196 Q30 128 62 112 L100 100 L138 112 Q170 128 172 196 Q100 208 28 196 Z" fill="#6e1420"/>
+<path d="M62 112 L100 100 L138 112 L132 150 L100 142 L68 150 Z" fill="#8f1b2a"/>
+<!-- neck and face -->
+<rect x="88" y="78" width="24" height="26" rx="8" fill="#e8b88f"/>
+<ellipse cx="100" cy="66" rx="30" ry="34" fill="#f5d0b0"/>
+<!-- ears (plain) -->
+<ellipse cx="70" cy="66" rx="6" ry="9" fill="#f5d0b0"/>
+<ellipse cx="130" cy="66" rx="6" ry="9" fill="#f5d0b0"/>
+<!-- hair, back layer: long dark maroon/black spiky hair -->
+<path d="M100 22 Q66 22 62 58 Q56 82 66 108 L72 84 Q70 62 80 48 Q88 32 100 30 Q112 32 120 48 Q130 62 128 84 L134 108 Q144 82 138 58 Q134 22 100 22 Z" fill="#2a0f1a"/>
+<path d="M100 26 Q74 26 70 56 L76 52 Q84 38 100 36 Q116 38 124 52 L130 56 Q126 26 100 26 Z" fill="#3d1420"/>
+<!-- hair fringe spikes over the forehead -->
+<path d="M70 58 Q76 40 88 36 L84 52 L96 38 L100 52 L110 36 L112 50 L124 40 L126 56 Q118 46 100 46 Q82 46 70 58 Z" fill="#2a0f1a"/>
+<!-- IDLE face: calm neutral -->
+<g class="expr-idle">
+<ellipse cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="88" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="112" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<path d="M80 56 Q88 53 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M104 56 Q112 53 120 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M94 88 Q100 90 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+</g>
+<!-- LISTENING face: wider open eyes, raised brows, small open mouth -->
+<g class="expr-listening">
+<ellipse cx="88" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse cx="88" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
+<ellipse cx="112" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse cx="112" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
+<path d="M79 54 Q88 50 97 54" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M103 54 Q112 50 121 54" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<ellipse cx="100" cy="89" rx="4" ry="5" fill="#7a2a2a"/>
+</g>
+<!-- THINKING face: pupils glancing sideways, one brow raised, sparkle -->
+<g class="expr-thinking">
+<ellipse cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="93" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="117" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<path d="M80 56 Q88 53 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M103 52 Q112 49 121 53" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M94 88 Q100 87 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M148 30 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5 Z" fill="#00e5ff"/>
+</g>
+<!-- TERMINATED face: eyes closed -->
+<g class="expr-terminated">
+<path d="M81 68 Q88 64 95 68" stroke="#2a0f1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M105 68 Q112 64 119 68" stroke="#2a0f1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M80 56 Q88 55 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M104 56 Q112 55 120 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M94 88 Q100 88 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+</g>
+<!-- ANGRY / GUARD face: angled brows, narrowed eyes, frown -->
+<g class="expr-angry">
+<path d="M78 54 L97 60" stroke="#2a0f1a" stroke-width="3" stroke-linecap="round"/>
+<path d="M122 54 L103 60" stroke="#2a0f1a" stroke-width="3" stroke-linecap="round"/>
+<path d="M82 68 Q88 66 94 68 Q88 71 82 68 Z" fill="#e53935"/>
+<path d="M106 68 Q112 66 118 68 Q112 71 106 68 Z" fill="#e53935"/>
+<path d="M92 90 Q100 86 108 90" stroke="#7a2a2a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</g>
+</svg></div></div>
 <div id="stateLine">IDLE — READY</div>
 <div style="margin-top:10px" class="row">
 <button class="primary" id="wakeBtn">🎤 WAKE / LISTEN</button>
@@ -132,7 +206,7 @@ else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 Note
 else if(agent==='Guard'){reply='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';}
 else if(agent==='Sage'){reply='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';}
 else{reply='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';}
-say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);setState('idle','IDLE — READY');
+say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);if(agent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry';document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}else{setState('idle','IDLE — READY');}
 },400);
 }
 function renderMemory(){var el=document.getElementById('memoryList');el.innerHTML='<b>Facts:</b><br>'+(facts.length?facts.map(function(f){return '• '+f;}).join('<br>'):'(koi fact save nahi)')+'<br><br><b>Notes:</b><br>'+(notes.length?notes.map(function(n){return '• '+n;}).join('<br>'):'(koi note nahi)');}
@@ -146,7 +220,7 @@ document.getElementById('wakeBtn').onclick=function(){terminated=false;setState(
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
 document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved');};
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
-renderMemory();renderStatus();log('AEGIS PRIME started — v0.2 redesign');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+renderMemory();renderStatus();log('AEGIS PRIME started — v0.3 character');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>
