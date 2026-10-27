@@ -42,6 +42,17 @@ main{display:grid;grid-template-columns:212px 1fr 308px;gap:14px;padding:14px;he
 .orb.terminated .expr-terminated{display:inline}
 .orb.angry .expr-idle{display:none}
 .orb.angry .expr-angry{display:inline}
+
+/* v0.4 animation: head movement, blinking, speaking */
+#headGroup{transform-box:fill-box;transform-origin:50% 80%;animation:headBob 4s ease-in-out infinite}
+.orb.listening #headGroup{animation:headListen 2.2s ease-in-out infinite}
+.orb.speaking #headGroup{animation:headNod .5s ease-in-out infinite}
+.orb.terminated #headGroup{animation:none}
+@keyframes headBob{0%,100%{transform:rotate(-1.2deg) translateY(0)}50%{transform:rotate(1.2deg) translateY(-2px)}}
+@keyframes headListen{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(2deg) translateY(-1px)}}
+@keyframes headNod{0%,100%{transform:rotate(0deg) translateY(0)}50%{transform:rotate(1deg) translateY(2px)}}
+.orb.blinking .eye{opacity:0}
+.orb.speaking svg{filter:drop-shadow(0 0 24px rgba(0,255,157,.7))}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes spin{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
 #stateLine{color:var(--accent2);font-weight:800;letter-spacing:3px;margin-top:14px;font-size:14px}
@@ -64,7 +75,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span class="pill">v0.3 &bull; CHARACTER</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.4 &bull; ANIMATED</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -84,6 +95,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <!-- cloak: plain dark crimson, no pattern -->
 <path d="M28 196 Q30 128 62 112 L100 100 L138 112 Q170 128 172 196 Q100 208 28 196 Z" fill="#6e1420"/>
 <path d="M62 112 L100 100 L138 112 L132 150 L100 142 L68 150 Z" fill="#8f1b2a"/>
+<g id="headGroup">
 <!-- neck and face -->
 <rect x="88" y="78" width="24" height="26" rx="8" fill="#e8b88f"/>
 <ellipse cx="100" cy="66" rx="30" ry="34" fill="#f5d0b0"/>
@@ -97,27 +109,24 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <path d="M70 58 Q76 40 88 36 L84 52 L96 38 L100 52 L110 36 L112 50 L124 40 L126 56 Q118 46 100 46 Q82 46 70 58 Z" fill="#2a0f1a"/>
 <!-- IDLE face: calm neutral -->
 <g class="expr-idle">
-<ellipse cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="88" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
-<ellipse cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="112" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse class="eye" cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse class="eye" cx="88" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse class="eye" cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse class="eye" cx="112" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
 <path d="M80 56 Q88 53 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
 <path d="M104 56 Q112 53 120 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-<path d="M94 88 Q100 90 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
 </g>
 <!-- LISTENING face: wider open eyes, raised brows, small open mouth -->
 <g class="expr-listening">
-<ellipse cx="88" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse cx="88" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
-<ellipse cx="112" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse cx="112" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
+<ellipse class="eye" cx="88" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse class="eye" cx="88" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
+<ellipse class="eye" cx="112" cy="68" rx="7.5" ry="9" fill="#e53935"/><ellipse class="eye" cx="112" cy="68" rx="3" ry="3.5" fill="#1a0505"/>
 <path d="M79 54 Q88 50 97 54" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
 <path d="M103 54 Q112 50 121 54" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-<ellipse cx="100" cy="89" rx="4" ry="5" fill="#7a2a2a"/>
 </g>
 <!-- THINKING face: pupils glancing sideways, one brow raised, sparkle -->
 <g class="expr-thinking">
-<ellipse cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="93" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
-<ellipse cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse cx="117" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse class="eye" cx="88" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse class="eye" cx="93" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
+<ellipse class="eye" cx="112" cy="68" rx="6" ry="7" fill="#e53935"/><ellipse class="eye" cx="117" cy="68" rx="2.5" ry="3" fill="#1a0505"/>
 <path d="M80 56 Q88 53 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
 <path d="M103 52 Q112 49 121 53" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-<path d="M94 88 Q100 87 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
 <path d="M148 30 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5 Z" fill="#00e5ff"/>
 </g>
 <!-- TERMINATED face: eyes closed -->
@@ -126,15 +135,19 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <path d="M105 68 Q112 64 119 68" stroke="#2a0f1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
 <path d="M80 56 Q88 55 96 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
 <path d="M104 56 Q112 55 120 56" stroke="#2a0f1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-<path d="M94 88 Q100 88 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
 </g>
 <!-- ANGRY / GUARD face: angled brows, narrowed eyes, frown -->
 <g class="expr-angry">
 <path d="M78 54 L97 60" stroke="#2a0f1a" stroke-width="3" stroke-linecap="round"/>
 <path d="M122 54 L103 60" stroke="#2a0f1a" stroke-width="3" stroke-linecap="round"/>
-<path d="M82 68 Q88 66 94 68 Q88 71 82 68 Z" fill="#e53935"/>
-<path d="M106 68 Q112 66 118 68 Q112 71 106 68 Z" fill="#e53935"/>
-<path d="M92 90 Q100 86 108 90" stroke="#7a2a2a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path class="eye" d="M82 68 Q88 66 94 68 Q88 71 82 68 Z" fill="#e53935"/>
+<path class="eye" d="M106 68 Q112 66 118 68 Q112 71 106 68 Z" fill="#e53935"/>
+</g><!-- v0.4 mouth layer: independent of expression groups, driven by lip-sync JS -->
+<g id="mouthClosed"><path d="M94 88 Q100 90 106 88" stroke="#7a4a2a" stroke-width="2" fill="none" stroke-linecap="round"/></g>
+<g id="mouthSmall" style="display:none"><ellipse cx="100" cy="89" rx="4" ry="5" fill="#7a2a2a"/></g>
+<g id="mouthWide" style="display:none"><ellipse cx="100" cy="90" rx="7" ry="9" fill="#7a2a2a"/></g>
+<g id="mouthSmile" style="display:none"><path d="M92 86 Q100 98 108 86 Q100 92 92 86 Z" fill="#7a2a2a"/></g>
+<g id="mouthFrown" style="display:none"><path d="M92 90 Q100 86 108 90" stroke="#7a2a2a" stroke-width="2.5" fill="none" stroke-linecap="round"/></g>
 </g>
 </svg></div></div>
 <div id="stateLine">IDLE — READY</div>
@@ -183,8 +196,15 @@ var facts=JSON.parse(localStorage.getItem('aegis_facts')||'[]');
 var notes=JSON.parse(localStorage.getItem('aegis_notes')||'[]');
 function save(){localStorage.setItem('aegis_facts',JSON.stringify(facts));localStorage.setItem('aegis_notes',JSON.stringify(notes));renderMemory();renderStatus();}
 function log(t){var d=document.getElementById('log');d.innerHTML='<div><b>'+new Date().toLocaleTimeString()+'</b> — '+t+'</div>'+d.innerHTML;}
-function setState(s,txt){state=s;var o=document.getElementById('orb');o.className='orb'+(s==='idle'?'':s==='terminated'?' terminated':' '+s);document.getElementById('stateLine').textContent=txt;}
-function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;if(document.getElementById('voiceToggle').checked && 'speechSynthesis' in window){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,'')));}catch(e){}}}
+function setState(s,txt){state=s;var o=document.getElementById('orb');var extra='';if(o.classList.contains('speaking'))extra+=' speaking';if(o.classList.contains('blinking'))extra+=' blinking';o.className='orb'+(s==='idle'?'':s==='terminated'?' terminated':' '+s)+extra;document.getElementById('stateLine').textContent=txt;if(!speaking)setMouth(mouthForState());}
+var speaking=false,lipTimer=null,lipIdx=0,speechFallbackTimer=null;
+function setMouth(id){['mouthClosed','mouthSmall','mouthWide','mouthSmile','mouthFrown'].forEach(function(m){var el=document.getElementById(m);if(el)el.style.display=(m===id?'inline':'none');});}
+function mouthForState(){var o=document.getElementById('orb');if(o.classList.contains('terminated'))return 'mouthClosed';if(o.classList.contains('angry'))return 'mouthFrown';if(o.classList.contains('listening'))return 'mouthSmall';return 'mouthClosed';}
+function startLipSync(){if(speaking)return;speaking=true;document.getElementById('orb').classList.add('speaking');var shapes=['mouthSmall','mouthWide','mouthSmile','mouthSmall','mouthWide'];lipIdx=0;setMouth(shapes[0]);lipTimer=setInterval(function(){lipIdx++;setMouth(shapes[lipIdx%shapes.length]);},120);}
+function stopLipSync(){if(!speaking && !lipTimer && !speechFallbackTimer)return;speaking=false;if(lipTimer){clearInterval(lipTimer);lipTimer=null;}if(speechFallbackTimer){clearTimeout(speechFallbackTimer);speechFallbackTimer=null;}document.getElementById('orb').classList.remove('speaking');setMouth(mouthForState());}
+function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;var clean=text.replace(/<[^>]*>/g,'');var est=Math.max(1200,Math.min(8000,clean.length*70));if(document.getElementById('voiceToggle').checked && 'speechSynthesis' in window){try{stopLipSync();speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(clean);u.onstart=function(){startLipSync();};u.onend=function(){stopLipSync();};u.onerror=function(){stopLipSync();};speechSynthesis.speak(u);speechFallbackTimer=setTimeout(function(){if(!speaking){startLipSync();speechFallbackTimer=setTimeout(function(){stopLipSync();},est);}else{speechFallbackTimer=null;}},300);}catch(e){startLipSync();setTimeout(function(){stopLipSync();},est);}}else{startLipSync();setTimeout(function(){stopLipSync();},est);}}
+/* v0.4 blinking: every ~3-5s, eyelids shut for ~150ms (skipped while terminated) */
+(function blinkLoop(){setTimeout(function(){var o=document.getElementById('orb');if(!o.classList.contains('terminated')){o.classList.add('blinking');setTimeout(function(){o.classList.remove('blinking');},150);}blinkLoop();},3000+Math.random()*2000);})();
 function userMsg(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>YOU:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;}
 function agentFor(q){q=q.toLowerCase();if(/password|phishing|scan|security|scam/.test(q))return 'Guard';if(/remember|note|plan|recall|yaad/.test(q))return 'Scout';if(/what is|how|explain|kya hai|kaise/.test(q))return 'Sage';return 'Core';}
 function styleReply(text){var c=document.getElementById('characterSelect').value;if(c==='jarvis')return 'Sir, '+text;if(c==='focus')return text;return text;}
@@ -206,7 +226,7 @@ else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 Note
 else if(agent==='Guard'){reply='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';}
 else if(agent==='Sage'){reply='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';}
 else{reply='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';}
-say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);if(agent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry';document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}else{setState('idle','IDLE — READY');}
+say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+agent);if(agent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry'+(_o.classList.contains('speaking')?' speaking':'');document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}else{setState('idle','IDLE — READY');}
 },400);
 }
 function renderMemory(){var el=document.getElementById('memoryList');el.innerHTML='<b>Facts:</b><br>'+(facts.length?facts.map(function(f){return '• '+f;}).join('<br>'):'(koi fact save nahi)')+'<br><br><b>Notes:</b><br>'+(notes.length?notes.map(function(n){return '• '+n;}).join('<br>'):'(koi note nahi)');}
@@ -215,12 +235,12 @@ document.querySelectorAll('.side button').forEach(function(b){b.onclick=function
 document.querySelectorAll('.skill').forEach(function(s){s.onclick=function(){handle(s.dataset.skill==='calc'?'calc 12*8+5':s.dataset.skill==='password'?'password check DemoPass123!':s.dataset.skill);};});
 document.getElementById('sendBtn').onclick=function(){var v=document.getElementById('userInput').value;document.getElementById('userInput').value='';handle(v);};
 document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=e.target.value;e.target.value='';handle(v);}});
-document.getElementById('terminateBtn').onclick=function(){terminated=true;if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
+document.getElementById('terminateBtn').onclick=function(){terminated=true;stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
 document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
 document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved');};
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
-renderMemory();renderStatus();log('AEGIS PRIME started — v0.3 character');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+renderMemory();renderStatus();log('AEGIS PRIME started — v0.4 animated');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>

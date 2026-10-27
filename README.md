@@ -20,6 +20,19 @@ A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic 
 1. Open `index.html`.
 2. Type `help`, then try: `time`, `calc 12*8`, `password check MyPass123`, `remember that my laptop is at repair`, `recall laptop`, `tip`, `system`.
 
+## v0.4 animated character (2026-10-27)
+
+The v0.3 SVG swordsman is now a living animated character (the sheet-photo
+version was rejected by Akash — still photos cannot lip-sync). Lip movement
+is wired into say(): the mouth cycles small/wide/smile-open while speech
+plays and stops when speech ends (typed replies animate too, for an
+estimated duration). Plus: blinking every 3-5 seconds, head bob/tilt/nod,
+breathing, listening glow, thinking sway, and all v0.3 moods
+(idle/listening/thinking/terminated/angry-Guard). Honest limit: lip-sync
+is rhythm-based mouth cycling, not phoneme-perfect visemes — no browser
+speech API gives phoneme timings. No binary images, no external URLs, no
+Demon Slayer copy.
+
 ## v0.3 character (2026-10-27)
 
 The orb is replaced, in the same centred spot, by an original inline-SVG
