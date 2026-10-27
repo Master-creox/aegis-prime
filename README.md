@@ -1,108 +1,91 @@
-## v0.5.1 fix (2026-10-27)
+# AEGIS PRIME — Personal AI HUD (v0.6 VOICE)
 
-Bug fix: 'What is ...?' questions were treated as local memory lookups, so they never reached the CreoX brain (reply was 'memory me kuch nahi mila'). Now: if the question matches a saved local fact, memory answers first; otherwise the question goes to the CreoX brain when it is ON. Test with 'What is phishing?' — it should now reply 'via CreoX brain'.
+## v0.6 voice improvement (2026-10-27)
 
-# Aegis Prime — Personal AI HUD (v0.5 LLM)
+Akash said the voice sounded very robotic. This version tackles that honestly —
+it does **not** claim to turn a system voice into a neural voice.
 
-Single-file HUD (`index.html`) with an animated SVG swordsman character
-(lip-sync, blinking, head movement, breathing, moods) and, new in v0.5,
-a **real LLM brain via Akash's OWN Master CreoX API** — no third-party
-LLM, no sheet photos, no binary images.
+### Why the old voice sounded robotic
 
-## The brain: Master CreoX API (own, self-reliant)
+The HUD speaks through the browser's built-in `SpeechSynthesis` voices — the
+voices installed on the machine / shipped with the browser. Those are
+formant-based system voices by design, so they sound flat and robotic
+compared with modern neural voices. No setting in this file can magically
+make a system voice neural. What v0.6 does is give Akash control to pick
+the **least robotic voice actually available on his machine** and tune it.
 
-- Live base: `https://master-creox-api.onrender.com` (v0.5.0, production).
-- Chat endpoint: `POST {base}/api/v1/chat/completions`
-  - Header: `X-API-Key: <dedicated chat key>`
-  - Body: `{"model":"creox","messages":[{"role":"user","content":"..."}],"session_id":<int or null>}`
-  - Response: `{"reply":"...","model":"creox","usage":{...},"session_id":<int>}`
-  - The returned `session_id` is saved in localStorage
-    (`aegis_creox_session_id`) and sent with later messages, so the
-    conversation keeps context.
-- The engine behind model `creox` is **CreoXEngine**: deterministic,
-  offline, key-free on the server side, built around a cybersecurity
-  knowledge base. That is a strength for a security HUD — and an honest
-  limit (see below).
+### What's new in v0.6
 
-## How to create the dedicated chat key (README only — never in code)
+- **Voice dropdown (SETTING panel):** populated at runtime from
+  `speechSynthesis.getVoices()`, with a `voiceschanged` handler, because
+  voices load asynchronously and are empty on first read in Chrome.
+- **Rate slider:** 0.7–1.2, step 0.05, default **0.95** (slightly slower
+  than 1.0 sounds less rushed and less robotic).
+- **Pitch slider:** 0.7–1.3, step 0.05, default **1.05** (a touch higher
+  than 1.0, less flat).
+- **Test Voice button:** speaks "Namaste, main AEGIS PRIME hoon. Ye meri
+  nayi awaaz hai." through the selected voice/rate/pitch, so Akash can
+  compare voices before saving.
+- **Auto-pick best default** when no voice is saved, by name matching
+  (never assuming a voice exists):
+  1. Google en-IN
+  2. Google en-US
+  3. Microsoft en-IN natural
+  4. Microsoft en-US natural
+  5. Microsoft en-IN
+  6. Microsoft en-US
+  7. Any en-IN
+  8. Any en-GB / en-US
+  9. First available voice / browser default
+- Voice name (`voiceURI`), rate and pitch are saved in localStorage
+  (`aegis_voice_name`, `aegis_voice_rate`, `aegis_voice_pitch`) via Save
+  Settings, and restored on startup. If the saved voice is missing on a
+  new machine, the auto-pick fallback is used instead of failing.
+- `say()` now routes speech through one `speakClean()` helper that sets
+  the selected voice, rate and pitch. Lip-sync start/stop wiring,
+  blinking, head movement, moods, the CreoX LLM brain, local skills and
+  memory are all unchanged from v0.5.1.
 
-1. Authenticate to the API as admin (bootstrap key) or as a JWT user.
-2. Create a key scoped to chat only:
-   `POST {base}/api/v1/keys` with body
-   `{"name":"aegis-prime","scopes":["chat"]}`
-3. The returned `mcx_` key is **shown only once**. Save it somewhere
-   safe, then paste it into the HUD: sidebar **SETTING → LLM Brain —
-   Master CreoX API → API Key**.
-4. **NEVER paste the admin key into the HUD.** The HUD must only ever
-   hold a dedicated chat-scoped key like the one above.
+### How to pick a good voice (laptop steps)
 
-## Using the brain in the HUD
+1. `git pull`, then `npm start` (or open `index.html` in Chrome).
+2. Open the SETTING panel → Voice section.
+3. Try each voice with **Test Voice**. On most machines Chrome offers
+   better Google voices than Electron's system voices — if a voice
+   sounds robotic in Electron, try the same page in Chrome.
+4. Recommended starting settings: **rate 0.95, pitch 1.05**. Then adjust
+   in small steps (0.05 at a time) — big jumps sound worse, not better.
+5. Press **Save Settings** once you like a voice.
 
-- In **SETTING**, set the API Base URL (default
-  `https://master-creox-api.onrender.com`), paste the dedicated chat
-  key, tick **"Use CreoX API brain for open questions"**, then click
-  **Save Settings**.
-- **Brain default is OFF** until a key is saved, so the HUD works out
-  of the box with rule-based replies only.
-- **Test Connection** calls `GET {base}/api/v1/models` with your key
-  and reports OK / failed (with the status, e.g. 401 for an invalid
-  key). The key value is never shown in the status, the log, or chat.
-- When the brain is ON and a key is saved, open questions go to the
-  API: state shows **"THINKING — CREOX BRAIN…"**, the reply appears
-  with a **Core** badge and a small **"via CreoX brain"** note in the
-  log.
-- **Local first, always:** time/date, calculator, password strength,
-  system info, and memory commands (`remember that…`, `recall…`,
-  `note…`) are handled locally before any API call. The API is for
-  open questions, not for replacing local skills/memory.
+### Known limits (honest)
 
-## Render sleep + timeout + fallback
+- **Electron voice may still fail.** The known Electron limitation is
+  unchanged: speech upload can fail with Error -2 in Electron, while
+  Chrome voice usually works. Typing works fully in both.
+- **This is still a system voice.** Even the best available system
+  voice will not sound like a human or like a neural assistant voice.
+- **Truly natural voice = later phase, not built here.** Two real
+  options, both need extra setup:
+  - **Cloud neural TTS** (e.g. Google Cloud TTS / similar): natural
+    voices, but needs an API key and has a cost — the key must live
+    in-app only, never in the repo.
+  - **Local neural TTS on the laptop** (e.g. Piper): private, no key
+    and no cost, but needs a laptop install and a voice model download.
+  Neither is included in v0.6; Akash can pick one as the next voice phase.
 
-- Render free services **sleep when idle**, so the **first request
-  after sleep can take ~1 minute**. The HUD uses a **90-second
-  timeout** (AbortController) and shows the "THINKING — CREOX BRAIN…"
-  state while waiting — do not press SEND twice.
-- **On any failure the HUD falls back to its existing rule-based
-  reply** and logs the honest reason, without ever logging the key:
-  - No key saved / brain OFF → rule-based replies only.
-  - **401** invalid key → "CreoX brain unavailable (401) — rule-based
-    reply used" (check the key, re-paste the dedicated chat key).
-  - **429** rate limit → same fallback; wait and retry.
-  - Network error / **timeout (90s)** → same fallback; Render may
-    still be waking up — retry once.
-  - Empty API reply → rule-based reply, logged as such.
+### v0.5.1 fix (kept from the previous version)
 
-## Where the key lives
+" What is ...?" questions were treated as local memory lookups, so they
+never reached the CreoX brain. Now: if the question matches a saved
+local fact, memory answers first; otherwise the question goes to the
+CreoX brain when it is ON. Test with "What is phishing?" — it should
+reply "via CreoX brain".
 
-- Only in the laptop's browser/Electron **localStorage**:
-  `aegis_creox_base`, `aegis_creox_key`, `aegis_creox_brain`,
-  `aegis_creox_session_id`.
-- **Never in the repo, never in `index.html`** — grep the file for
-  `mcx_` and you will find nothing. If you share the folder, remove
-  the key from Settings first (or clear site data).
+### v0.5 LLM (kept)
 
-## Honest limits
-
-- CreoXEngine is **cybersecurity-focused and deterministic**. For
-  questions inside its knowledge base it gives a real, on-topic
-  answer. For general chit-chat outside that KB it returns its honest
-  fallback reply — it does not pretend to be a general-purpose LLM.
-  Small talk (greetings, time/date, simple skills) stays local.
-- Lip-sync is rhythm-based mouth cycling while speech plays, not
-  phoneme-perfect visemes (no browser speech API gives phoneme
-  timings).
-- Electron voice limitation is unchanged: voice works in Chrome;
-  in Electron, speech upload can fail (Error -2) and typing works
-  fully.
-
-## Run (desktop, same as v0.4)
-
-```
-cd C:\Users\Master_Creox\aegis-prime
-git pull
-npm start
-```
-
-After the v0.5 push, the C → D transfer (moving the whole project
-folder to the D: drive) is a separate laptop step — the HUD code
-itself does not change when the folder moves.
+Real brain via Akash's own Master CreoX API
+(`POST /api/v1/chat/completions`, model `creox`). The HUD key is a
+dedicated chat-scoped key saved only in localStorage — never the admin
+key, never hardcoded. Local skills and memory run first; the API is for
+open questions, with a rule-based fallback on 401/429/timeout
+(90-second timeout covers Render free-service sleep).

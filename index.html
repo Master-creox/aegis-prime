@@ -75,7 +75,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span class="pill">v0.5 &bull; LLM</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.6 &bull; VOICE</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -176,6 +176,12 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <label>AI Name</label><input id="aiName" value="AEGIS PRIME">
 <label>Accent Colour</label><select id="accentSelect"><option value="#00e5ff">Cyan (video jaisa)</option><option value="#00ff9d">Green</option><option value="#a855f7">Purple</option></select>
 <label><input type="checkbox" id="voiceToggle" checked style="width:auto"> Speak replies aloud (if browser supports it)</label>
+<h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🎙️ Voice — kam robotic lage, isliye choose karo</h4>
+<label>Voice (is device par maujood voices me se)</label><select id="voiceSelect"><option value="">Loading voices…</option></select>
+<label>Voice Speed (Rate) — <span id="voiceRateVal">0.95</span></label><input type="range" id="voiceRate" min="0.7" max="1.2" step="0.05" value="0.95">
+<label>Voice Pitch — <span id="voicePitchVal">1.05</span></label><input type="range" id="voicePitch" min="0.7" max="1.3" step="0.05" value="1.05">
+<button class="primary" id="voiceTestBtn" type="button">Test Voice</button>
+<p class="small">Chrome me aam taur par Google ki voices milti hain, jo Electron ki system voices se kam robotic lagti hain. Voice change karke Test Voice dabao, jo sabse natural lage wahi Save karo.</p>
 <h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🧠 LLM Brain — Master CreoX API</h4>
 <label>API Base URL</label><input id="creoxBase" value="https://master-creox-api.onrender.com">
 <label>API Key (dedicated chat-scoped key only — never the admin key)</label><input type="password" id="creoxKey" placeholder="Paste your dedicated chat key here">
@@ -201,7 +207,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 var state='idle', terminated=false;
 var facts=JSON.parse(localStorage.getItem('aegis_facts')||'[]');
 var notes=JSON.parse(localStorage.getItem('aegis_notes')||'[]');
-/* v0.5.1 LLM brain — Master CreoX API (own API, never a hardcoded key) */
+/* v0.6 VOICE + v0.5.1 LLM brain — Master CreoX API (own API, never a hardcoded key) */
 var creoxBase=(localStorage.getItem('aegis_creox_base')||'https://master-creox-api.onrender.com').trim();
 var creoxKey=localStorage.getItem('aegis_creox_key')||'';
 var creoxBrain=localStorage.getItem('aegis_creox_brain')==='1';
@@ -250,7 +256,61 @@ function setMouth(id){['mouthClosed','mouthSmall','mouthWide','mouthSmile','mout
 function mouthForState(){var o=document.getElementById('orb');if(o.classList.contains('terminated'))return 'mouthClosed';if(o.classList.contains('angry'))return 'mouthFrown';if(o.classList.contains('listening'))return 'mouthSmall';return 'mouthClosed';}
 function startLipSync(){if(speaking)return;speaking=true;document.getElementById('orb').classList.add('speaking');var shapes=['mouthSmall','mouthWide','mouthSmile','mouthSmall','mouthWide'];lipIdx=0;setMouth(shapes[0]);lipTimer=setInterval(function(){lipIdx++;setMouth(shapes[lipIdx%shapes.length]);},120);}
 function stopLipSync(){if(!speaking && !lipTimer && !speechFallbackTimer)return;speaking=false;if(lipTimer){clearInterval(lipTimer);lipTimer=null;}if(speechFallbackTimer){clearTimeout(speechFallbackTimer);speechFallbackTimer=null;}document.getElementById('orb').classList.remove('speaking');setMouth(mouthForState());}
-function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;var clean=text.replace(/<[^>]*>/g,'');var est=Math.max(1200,Math.min(8000,clean.length*70));if(document.getElementById('voiceToggle').checked && 'speechSynthesis' in window){try{stopLipSync();speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(clean);u.onstart=function(){startLipSync();};u.onend=function(){stopLipSync();};u.onerror=function(){stopLipSync();};speechSynthesis.speak(u);speechFallbackTimer=setTimeout(function(){if(!speaking){startLipSync();speechFallbackTimer=setTimeout(function(){stopLipSync();},est);}else{speechFallbackTimer=null;}},300);}catch(e){startLipSync();setTimeout(function(){stopLipSync();},est);}}else{startLipSync();setTimeout(function(){stopLipSync();},est);}}
+/* v0.6 voice: pick the least-robotic system voice available, tune rate/pitch.
+   No voice name is assumed to exist — every choice is matched at runtime and
+   falls back to the browser default when the saved voice is missing. */
+var aegisVoiceName='';try{aegisVoiceName=localStorage.getItem('aegis_voice_name')||'';}catch(e){}
+var aegisVoiceRate=0.95,aegisVoicePitch=1.05;
+try{var _r=parseFloat(localStorage.getItem('aegis_voice_rate'));if(!isNaN(_r))aegisVoiceRate=_r;}catch(e){}
+try{var _p=parseFloat(localStorage.getItem('aegis_voice_pitch'));if(!isNaN(_p))aegisVoicePitch=_p;}catch(e){}
+function voiceList(){try{return ('speechSynthesis' in window)?speechSynthesis.getVoices():[];}catch(e){return [];}}
+function findVoice(pred){var vs=voiceList();for(var i=0;i<vs.length;i++){if(pred(vs[i]))return vs[i];}return null;}
+function langOf(v){return (v.lang||'').toLowerCase().replace('_','-');}
+function nameOf(v){return (v.name||'').toLowerCase();}
+function pickBestVoice(){
+  var vs=voiceList();if(!vs.length)return null;
+  return findVoice(function(v){return nameOf(v).indexOf('google')>=0 && langOf(v).indexOf('en-in')===0;})
+    || findVoice(function(v){return nameOf(v).indexOf('google')>=0 && langOf(v).indexOf('en-us')===0;})
+    || findVoice(function(v){return nameOf(v).indexOf('microsoft')>=0 && nameOf(v).indexOf('natural')>=0 && langOf(v).indexOf('en-in')===0;})
+    || findVoice(function(v){return nameOf(v).indexOf('microsoft')>=0 && nameOf(v).indexOf('natural')>=0 && langOf(v).indexOf('en-us')===0;})
+    || findVoice(function(v){return nameOf(v).indexOf('microsoft')>=0 && langOf(v).indexOf('en-in')===0;})
+    || findVoice(function(v){return nameOf(v).indexOf('microsoft')>=0 && langOf(v).indexOf('en-us')===0;})
+    || findVoice(function(v){return langOf(v).indexOf('en-in')===0;})
+    || findVoice(function(v){return langOf(v).indexOf('en-gb')===0;})
+    || findVoice(function(v){return langOf(v).indexOf('en-us')===0;})
+    || vs[0];
+}
+function getSelectedVoice(){
+  var vs=voiceList();if(!vs.length)return null;
+  if(aegisVoiceName){
+    for(var i=0;i<vs.length;i++){if(vs[i].voiceURI===aegisVoiceName||vs[i].name===aegisVoiceName)return vs[i];}
+  }
+  return pickBestVoice();
+}
+function populateVoices(){
+  var sel=document.getElementById('voiceSelect');if(!sel)return;
+  if(!('speechSynthesis' in window)){sel.innerHTML='<option value="">Voice is browser me supported nahi hai</option>';return;}
+  var vs=voiceList();if(!vs.length)return; /* voiceschanged will retry */
+  var html='';for(var i=0;i<vs.length;i++){html+='<option value="'+vs[i].voiceURI.replace(/"/g,'')+'">'+vs[i].name+' ('+vs[i].lang+')</option>';}
+  sel.innerHTML=html;
+  var chosen=getSelectedVoice();
+  if(chosen){sel.value=chosen.voiceURI;if(!aegisVoiceName)aegisVoiceName=chosen.voiceURI;}
+  else if(vs.length){sel.value=vs[0].voiceURI;}
+}
+function speakClean(clean,est){
+  if(!('speechSynthesis' in window))return false;
+  try{
+    stopLipSync();speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(clean);
+    var v=getSelectedVoice();if(v){u.voice=v;if(v.lang)u.lang=v.lang;}
+    u.rate=aegisVoiceRate;u.pitch=aegisVoicePitch;
+    u.onstart=function(){startLipSync();};u.onend=function(){stopLipSync();};u.onerror=function(){stopLipSync();};
+    speechSynthesis.speak(u);
+    speechFallbackTimer=setTimeout(function(){if(!speaking){startLipSync();speechFallbackTimer=setTimeout(function(){stopLipSync();},est);}else{speechFallbackTimer=null;}},300);
+    return true;
+  }catch(e){startLipSync();setTimeout(function(){stopLipSync();},est);return false;}
+}
+function say(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>CORE:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;var clean=text.replace(/<[^>]*>/g,'');var est=Math.max(1200,Math.min(8000,clean.length*70));if(document.getElementById('voiceToggle').checked){if(!speakClean(clean,est)){startLipSync();setTimeout(function(){stopLipSync();},est);}}else{startLipSync();setTimeout(function(){stopLipSync();},est);}}
 /* v0.4 blinking: every ~3-5s, eyelids shut for ~150ms (skipped while terminated) */
 (function blinkLoop(){setTimeout(function(){var o=document.getElementById('orb');if(!o.classList.contains('terminated')){o.classList.add('blinking');setTimeout(function(){o.classList.remove('blinking');},150);}blinkLoop();},3000+Math.random()*2000);})();
 function userMsg(text){var box=document.getElementById('chat');box.innerHTML+='<div class="msg"><b>YOU:</b> '+text+'</div>';box.scrollTop=box.scrollHeight;}
@@ -307,12 +367,18 @@ document.getElementById('userInput').addEventListener('keydown',function(e){if(e
 document.getElementById('terminateBtn').onclick=function(){terminated=true;stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
 document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
-document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
 document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.getElementById('creoxBase').value.trim()||creoxBase;creoxKey=document.getElementById('creoxKey').value;testCreoxConnection();};
+document.getElementById('voiceSelect').onchange=function(){aegisVoiceName=this.value;};
+document.getElementById('voiceRate').oninput=function(){aegisVoiceRate=parseFloat(this.value)||0.95;document.getElementById('voiceRateVal').textContent=this.value;};
+document.getElementById('voicePitch').oninput=function(){aegisVoicePitch=parseFloat(this.value)||1.05;document.getElementById('voicePitchVal').textContent=this.value;};
+document.getElementById('voiceTestBtn').onclick=function(){var s='Namaste, main AEGIS PRIME hoon. Ye meri nayi awaaz hai.';if(!speakClean(s,4000)){say('Voice is browser me supported nahi hai, isliye test nahi bol paya.');}else{log('Voice test played');}};
+if('speechSynthesis' in window){try{speechSynthesis.onvoiceschanged=populateVoices;}catch(e){}}
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
 renderMemory();renderStatus();
 (function(){var b=document.getElementById('creoxBase');if(b)b.value=creoxBase;var k=document.getElementById('creoxKey');if(k)k.value=creoxKey;var tg=document.getElementById('creoxBrainToggle');if(tg)tg.checked=creoxBrain;creoxRefreshStatus();})();
-log('AEGIS PRIME started — v0.5.1 LLM');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+(function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;populateVoices();})();
+log('AEGIS PRIME started — v0.6 VOICE');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>
