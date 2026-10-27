@@ -1,102 +1,104 @@
-# AEGIS PRIME — Personal AI HUD (v0.3 character)
+# Aegis Prime — Personal AI HUD (v0.5 LLM)
 
-A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic AI" Reel Akash shared on 2026-10-25 — built as original code, not a copy of that creator's project. Open `index.html` in any modern browser. No server, no API key, no install needed. Chat, memory and notes are stored only in the browser's localStorage on the user's own device.
+Single-file HUD (`index.html`) with an animated SVG swordsman character
+(lip-sync, blinking, head movement, breathing, moods) and, new in v0.5,
+a **real LLM brain via Akash's OWN Master CreoX API** — no third-party
+LLM, no sheet photos, no binary images.
 
-## What it does (all working in v0.1)
+## The brain: Master CreoX API (own, self-reliant)
 
-- **Glowing AI core orb** — states: Idle, Listening, Thinking, Terminated. The orb pulses, spins while thinking, and greys out on Terminate.
-- **Left control panel, like the video HUD** — CHAT, MEMORY, SKILLS, CHARACTER, SETTING, AGENTS.
-- **TERMINATE button** — stops speech, cancels the current task, and puts the core into Terminated state until WAKE is pressed again.
-- **WAKE / LISTEN** — tries the browser's built-in Speech Recognition (Chrome/Edge) and speaks replies with Speech Synthesis when the voice toggle is on. If voice is not supported, typing works fully.
-- **MEMORY** — `remember that …` saves a fact, `recall …` / `what is …` retrieves it, `note …` saves a note. Facts and notes persist in localStorage and are listed in the Memory panel.
-- **SKILLS (real, not fake)** — time/date, calculator (`calc 12*8+5`), password strength check (`password check DemoPass123!`), system info, cybersecurity tips.
-- **CHARACTER** — Friendly (casual Hinglish), Formal (Jarvis style), Focus (short & direct). Character changes tone only, never the facts.
-- **AGENTS** — requests are routed and labelled: Guard (security words), Scout (memory/plan words), Sage (explain/what-is words), Core (everything else).
-- **SETTINGS** — rename the AI, change the accent colour (cyan/green/purple), turn voice on/off, clear all memory.
-- **LIVE LOG + STATUS** — right panel logs every message, agent routing, panel change and Terminate/Wake, with a live clock and memory counts.
+- Live base: `https://master-creox-api.onrender.com` (v0.5.0, production).
+- Chat endpoint: `POST {base}/api/v1/chat/completions`
+  - Header: `X-API-Key: <dedicated chat key>`
+  - Body: `{"model":"creox","messages":[{"role":"user","content":"..."}],"session_id":<int or null>}`
+  - Response: `{"reply":"...","model":"creox","usage":{...},"session_id":<int>}`
+  - The returned `session_id` is saved in localStorage
+    (`aegis_creox_session_id`) and sent with later messages, so the
+    conversation keeps context.
+- The engine behind model `creox` is **CreoXEngine**: deterministic,
+  offline, key-free on the server side, built around a cybersecurity
+  knowledge base. That is a strength for a security HUD — and an honest
+  limit (see below).
 
-## Try it
+## How to create the dedicated chat key (README only — never in code)
 
-1. Open `index.html`.
-2. Type `help`, then try: `time`, `calc 12*8`, `password check MyPass123`, `remember that my laptop is at repair`, `recall laptop`, `tip`, `system`.
+1. Authenticate to the API as admin (bootstrap key) or as a JWT user.
+2. Create a key scoped to chat only:
+   `POST {base}/api/v1/keys` with body
+   `{"name":"aegis-prime","scopes":["chat"]}`
+3. The returned `mcx_` key is **shown only once**. Save it somewhere
+   safe, then paste it into the HUD: sidebar **SETTING → LLM Brain —
+   Master CreoX API → API Key**.
+4. **NEVER paste the admin key into the HUD.** The HUD must only ever
+   hold a dedicated chat-scoped key like the one above.
 
-## v0.4 animated character (2026-10-27)
+## Using the brain in the HUD
 
-The v0.3 SVG swordsman is now a living animated character (the sheet-photo
-version was rejected by Akash — still photos cannot lip-sync). Lip movement
-is wired into say(): the mouth cycles small/wide/smile-open while speech
-plays and stops when speech ends (typed replies animate too, for an
-estimated duration). Plus: blinking every 3-5 seconds, head bob/tilt/nod,
-breathing, listening glow, thinking sway, and all v0.3 moods
-(idle/listening/thinking/terminated/angry-Guard). Honest limit: lip-sync
-is rhythm-based mouth cycling, not phoneme-perfect visemes — no browser
-speech API gives phoneme timings. No binary images, no external URLs, no
-Demon Slayer copy.
+- In **SETTING**, set the API Base URL (default
+  `https://master-creox-api.onrender.com`), paste the dedicated chat
+  key, tick **"Use CreoX API brain for open questions"**, then click
+  **Save Settings**.
+- **Brain default is OFF** until a key is saved, so the HUD works out
+  of the box with rule-based replies only.
+- **Test Connection** calls `GET {base}/api/v1/models` with your key
+  and reports OK / failed (with the status, e.g. 401 for an invalid
+  key). The key value is never shown in the status, the log, or chat.
+- When the brain is ON and a key is saved, open questions go to the
+  API: state shows **"THINKING — CREOX BRAIN…"**, the reply appears
+  with a **Core** badge and a small **"via CreoX brain"** note in the
+  log.
+- **Local first, always:** time/date, calculator, password strength,
+  system info, and memory commands (`remember that…`, `recall…`,
+  `note…`) are handled locally before any API call. The API is for
+  open questions, not for replacing local skills/memory.
 
-## v0.3 character (2026-10-27)
+## Render sleep + timeout + fallback
 
-The orb is replaced, in the same centred spot, by an original inline-SVG
-anime swordsman character — no binary image, no external artwork, and no
-copy of any Demon Slayer character (no forehead mark, no earrings, no
-patterned haori). Expressions switch with the state: idle (calm),
-listening (wide eyes, green glow), thinking (glancing eyes, sparkle),
-terminated (grey, eyes closed), and angry/Guard (angled brows, red glow)
-for about 1.8 seconds when a reply is routed to the Guard agent. All other
-features are unchanged from v0.2. This is a stylised SVG illustration,
-not anime artwork — it will look simpler than reference anime images.
+- Render free services **sleep when idle**, so the **first request
+  after sleep can take ~1 minute**. The HUD uses a **90-second
+  timeout** (AbortController) and shows the "THINKING — CREOX BRAIN…"
+  state while waiting — do not press SEND twice.
+- **On any failure the HUD falls back to its existing rule-based
+  reply** and logs the honest reason, without ever logging the key:
+  - No key saved / brain OFF → rule-based replies only.
+  - **401** invalid key → "CreoX brain unavailable (401) — rule-based
+    reply used" (check the key, re-paste the dedicated chat key).
+  - **429** rate limit → same fallback; wait and retry.
+  - Network error / **timeout (90s)** → same fallback; Render may
+    still be waking up — retry once.
+  - Empty API reply → rule-based reply, logged as such.
 
-## v0.2 redesign (2026-10-27)
+## Where the key lives
 
-Full-window HUD redesign, same working features: bigger AI core with a
-rotating neon ring, glass panels, full-height three-panel layout, and a
-clearer top bar. No feature was removed and no IDs/logic changed — chat,
-memory, skills, character, settings, agents, WAKE/TERMINATE and the live
-log work exactly as in v0.1. The brain is still rule-based (not a real
-LLM) and Electron voice still uses the browser speech service, which can
-fail in Electron — see the voice note in the desktop section. Real brain
-and real voice are separate next phases, not claimed here.
+- Only in the laptop's browser/Electron **localStorage**:
+  `aegis_creox_base`, `aegis_creox_key`, `aegis_creox_brain`,
+  `aegis_creox_session_id`.
+- **Never in the repo, never in `index.html`** — grep the file for
+  `mcx_` and you will find nothing. If you share the folder, remove
+  the key from Settings first (or clear site data).
 
-## Desktop app (Electron wrapper)
+## Honest limits
 
-The same `index.html` now also runs as a desktop app in its own window —
-no browser tab needed. `main.js` opens the HUD in an Electron window
-(Chromium), `package.json` is the app definition.
+- CreoXEngine is **cybersecurity-focused and deterministic**. For
+  questions inside its knowledge base it gives a real, on-topic
+  answer. For general chit-chat outside that KB it returns its honest
+  fallback reply — it does not pretend to be a general-purpose LLM.
+  Small talk (greetings, time/date, simple skills) stays local.
+- Lip-sync is rhythm-based mouth cycling while speech plays, not
+  phoneme-perfect visemes (no browser speech API gives phoneme
+  timings).
+- Electron voice limitation is unchanged: voice works in Chrome;
+  in Electron, speech upload can fail (Error -2) and typing works
+  fully.
 
-### Run it on your laptop
-
-Requirements: Node.js LTS installed (`node --version` should print a
-version).
+## Run (desktop, same as v0.4)
 
 ```
-git clone https://github.com/Master-creox/aegis-prime.git
-cd aegis-prime
-npm install
+cd C:\Users\Master_Creox\aegis-prime
+git pull
 npm start
 ```
 
-The AEGIS PRIME window should open with the same orb, panels, chat,
-memory and skills as the browser version. Voice (WAKE / LISTEN) uses the
-same browser speech APIs inside Electron — allow microphone access if
-asked.
-
-To build a Windows installer/executable:
-
-```
-npm run build
-```
-
-The output lands in `dist/`.
-
-Note: memory (facts/notes in localStorage) lives per app — facts saved in
-the browser version do not automatically appear in the desktop app, and
-vice versa. That is expected: nothing leaves the device either way.
-
-## Honest limits (v0.1)
-
-- The brain is rule-based and runs fully in the browser — it is **not** a real LLM, and it does not do real threat scanning, real gesture control, or real device control. Those are future phases, not v0.1 claims.
-- Voice recognition/speech depend on the browser; on phones it may ask for microphone permission.
-- Nothing leaves the device: no server calls, no account, no data upload.
-
-## Roadmap ideas (not built yet)
-
-Voice-first mode, a real LLM brain behind an API key (entered in-app only, never in code), webcam gesture control, and system/device actions behind explicit permissions — all as separate, opt-in phases.
+After the v0.5 push, the C → D transfer (moving the whole project
+folder to the D: drive) is a separate laptop step — the HUD code
+itself does not change when the folder moves.

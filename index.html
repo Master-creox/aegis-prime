@@ -75,7 +75,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span class="pill">v0.4 &bull; ANIMATED</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.5 &bull; LLM</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -176,6 +176,13 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <label>AI Name</label><input id="aiName" value="AEGIS PRIME">
 <label>Accent Colour</label><select id="accentSelect"><option value="#00e5ff">Cyan (video jaisa)</option><option value="#00ff9d">Green</option><option value="#a855f7">Purple</option></select>
 <label><input type="checkbox" id="voiceToggle" checked style="width:auto"> Speak replies aloud (if browser supports it)</label>
+<h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🧠 LLM Brain — Master CreoX API</h4>
+<label>API Base URL</label><input id="creoxBase" value="https://master-creox-api.onrender.com">
+<label>API Key (dedicated chat-scoped key only — never the admin key)</label><input type="password" id="creoxKey" placeholder="Paste your dedicated chat key here">
+<label><input type="checkbox" id="creoxBrainToggle" style="width:auto"> Use CreoX API brain for open questions (default OFF until a key is saved)</label>
+<button class="primary" id="creoxTestBtn" type="button">Test Connection</button>
+<p class="small" id="creoxStatus">Brain: OFF — rule-based replies only.</p>
+<p class="small">Key kaise banaye: Master CreoX API par admin se POST /api/v1/keys, body {"name":"aegis-prime","scopes":["chat"]} — key sirf ek baar dikhti hai, usko yahan paste karo. Key sirf is laptop ke localStorage me rehti hai, kabhi repo me nahi jaati. Render free service sleep ho jaati hai, isliye pehli request me ~1 minute lag sakta hai.</p>
 <button class="primary" id="saveSettingsBtn">Save Settings</button></div>
 <div id="panel-agents" style="display:none"><h3>🤖 Agents</h3>
 <div class="agent"><b>🛡️ Guard</b> — security: password / phishing / scan words par ye agent jawab deta hai.</div>
@@ -194,6 +201,47 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 var state='idle', terminated=false;
 var facts=JSON.parse(localStorage.getItem('aegis_facts')||'[]');
 var notes=JSON.parse(localStorage.getItem('aegis_notes')||'[]');
+/* v0.5 LLM brain — Master CreoX API (own API, never a hardcoded key) */
+var creoxBase=(localStorage.getItem('aegis_creox_base')||'https://master-creox-api.onrender.com').trim();
+var creoxKey=localStorage.getItem('aegis_creox_key')||'';
+var creoxBrain=localStorage.getItem('aegis_creox_brain')==='1';
+var creoxSessionId=null;try{var _s=localStorage.getItem('aegis_creox_session_id');creoxSessionId=_s?JSON.parse(_s):null;}catch(e){creoxSessionId=null;}
+function creoxBaseUrl(){return creoxBase.replace(/\/$/,'');}
+function creoxBrainOn(){return creoxBrain && !!creoxKey;}
+function creoxStatusText(){if(!creoxBrain)return 'Brain: OFF — rule-based replies only.';if(!creoxKey)return 'Brain: ON, par koi key saved nahi hai — key save karo, tabhi CreoX brain chalega.';return 'Brain: ON — CreoX API (key saved, key kabhi dikhayi nahi jaati).';}
+function creoxRefreshStatus(){var el=document.getElementById('creoxStatus');if(el)el.textContent=creoxStatusText();}
+async function askCreoxBrain(q){
+  var ctrl=new AbortController();
+  var timer=setTimeout(function(){ctrl.abort();},90000);
+  try{
+    var res=await fetch(creoxBaseUrl()+'/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':creoxKey},body:JSON.stringify({model:'creox',messages:[{role:'user',content:q}],session_id:creoxSessionId}),signal:ctrl.signal});
+    if(!res.ok)throw new Error(res.status+' '+res.statusText);
+    var data=await res.json();
+    if(data.session_id!==undefined && data.session_id!==null){creoxSessionId=data.session_id;try{localStorage.setItem('aegis_creox_session_id',JSON.stringify(creoxSessionId));}catch(e){}}
+    return data.reply||'';
+  }catch(e){
+    if(e.name==='AbortError')throw new Error('timeout (90s) — Render sleep ho sakta hai, dobara try karo');
+    throw e;
+  }finally{clearTimeout(timer);}
+}
+function testCreoxConnection(){
+  var el=document.getElementById('creoxStatus');if(el)el.textContent='Testing connection… (Render sleep ho to ~1 min lag sakta hai)';
+  var ctrl=new AbortController();var timer=setTimeout(function(){ctrl.abort();},90000);
+  fetch(creoxBaseUrl()+'/api/v1/models',{headers:{'X-API-Key':creoxKey},signal:ctrl.signal}).then(function(res){
+    clearTimeout(timer);
+    if(!res.ok)throw new Error(res.status+' '+res.statusText);
+    if(el)el.textContent='Connection OK — models endpoint reachable. '+creoxStatusText();
+    log('CreoX connection test OK');
+  }).catch(function(e){
+    clearTimeout(timer);
+    var reason=(e.name==='AbortError')?'timeout (90s)':(e.message||'network error');
+    if(el)el.textContent='Connection failed ('+reason+') — key/base URL check karo. Key kabhi log nahi hoti.';
+    log('CreoX connection test failed ('+reason+')');
+  });
+}
+function isLocalCommand(low){
+  return low==='help'||/^(time|samay|date)/.test(low)||low.indexOf('system')===0||low.indexOf('tip')===0||low.indexOf('calc ')===0||low.indexOf('password check ')===0||/remember that |yaad rakho /.test(low)||low.indexOf('recall ')===0||low.indexOf('what is ')===0||low.indexOf('note ')===0;
+}
 function save(){localStorage.setItem('aegis_facts',JSON.stringify(facts));localStorage.setItem('aegis_notes',JSON.stringify(notes));renderMemory();renderStatus();}
 function log(t){var d=document.getElementById('log');d.innerHTML='<div><b>'+new Date().toLocaleTimeString()+'</b> — '+t+'</div>'+d.innerHTML;}
 function setState(s,txt){state=s;var o=document.getElementById('orb');var extra='';if(o.classList.contains('speaking'))extra+=' speaking';if(o.classList.contains('blinking'))extra+=' blinking';o.className='orb'+(s==='idle'?'':s==='terminated'?' terminated':' '+s)+extra;document.getElementById('stateLine').textContent=txt;if(!speaking)setMouth(mouthForState());}
@@ -214,6 +262,26 @@ if(terminated){say('Session terminated hai. Wake dabao, phir se start karte hain
 var q=raw.trim();if(!q)return;userMsg(q);log('Message → Agent: '+agentFor(q));setState('thinking','THINKING…');
 setTimeout(function(){
 var agent=agentFor(q), low=q.toLowerCase(), reply='';
+if(!isLocalCommand(low) && creoxBrainOn()){
+  setState('thinking','THINKING — CREOX BRAIN…');
+  log('CreoX brain se pooch raha hoon… (Render sleep ho to pehli request ~1 min lag sakti hai)');
+  askCreoxBrain(q).then(function(brainReply){
+    if(brainReply){say('<span class="badge">Core</span> '+styleReply(brainReply)+' <span class="small">via CreoX brain</span>');log('Reply via CreoX brain');}
+    else{say('<span class="badge">Core</span> '+styleReply('CreoX brain ne khaali jawab diya, isliye rule-based jawab de raha hoon. "help" likho, saare working commands dikh jayenge.'));log('CreoX brain ne khaali jawab diya — rule-based reply used');}
+    setState('idle','IDLE — READY');
+  }).catch(function(err){
+    var reason=(err&&err.message)?err.message:'network error';
+    log('CreoX brain unavailable ('+reason+') — rule-based reply used');
+    var fbAgent=agentFor(q), fb='';
+    if(fbAgent==='Guard')fb='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';
+    else if(fbAgent==='Sage')fb='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';
+    else fb='Samajh gaya. Main abhi rule-based demo brain par chal raha hoon — real LLM nahi hoon. "help" likho, saare working commands dikh jayenge.';
+    say('<span class="badge">'+fbAgent+'</span> '+styleReply(fb));
+    if(fbAgent==='Guard'){var _o=document.getElementById('orb');_o.className='orb angry'+(_o.classList.contains('speaking')?' speaking':'');document.getElementById('stateLine').textContent='GUARD — ALERT';setTimeout(function(){setState('idle','IDLE — READY');},1800);}
+    else{setState('idle','IDLE — READY');}
+  });
+  return;
+}
 if(low==='help'){reply='Commands: time, system, tip, calc 12*8, password check &lt;pass&gt;, remember that X is Y, recall X, note &lt;text&gt;, clear chat nahi — memory panel se clear karo.';}
 else if(/^(time|samay|date)/.test(low)){reply='Abhi ka time: '+new Date().toLocaleString('en-IN');}
 else if(low.indexOf('system')===0){reply='Browser: '+navigator.userAgent.split(')')[0]+') | Language: '+navigator.language+' | Online: '+navigator.onLine+' | Saved facts: '+facts.length+' | Notes: '+notes.length;}
@@ -230,7 +298,7 @@ say('<span class="badge">'+agent+'</span> '+styleReply(reply));log('Reply via '+
 },400);
 }
 function renderMemory(){var el=document.getElementById('memoryList');el.innerHTML='<b>Facts:</b><br>'+(facts.length?facts.map(function(f){return '• '+f;}).join('<br>'):'(koi fact save nahi)')+'<br><br><b>Notes:</b><br>'+(notes.length?notes.map(function(n){return '• '+n;}).join('<br>'):'(koi note nahi)');}
-function renderStatus(){document.getElementById('statusBox').innerHTML='Facts: '+facts.length+'<br>Notes: '+notes.length+'<br>Character: '+document.getElementById('characterSelect').value+'<br>Voice: '+(document.getElementById('voiceToggle').checked?'ON':'OFF');}
+function renderStatus(){document.getElementById('statusBox').innerHTML='Facts: '+facts.length+'<br>Notes: '+notes.length+'<br>Character: '+document.getElementById('characterSelect').value+'<br>Voice: '+(document.getElementById('voiceToggle').checked?'ON':'OFF')+'<br>Brain: '+(creoxBrainOn()?'CreoX API (ON)':'Rule-based (OFF)');}
 document.querySelectorAll('.side button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.side button').forEach(function(x){x.classList.remove('active');});b.classList.add('active');['chat','memory','skills','character','setting','agents'].forEach(function(p){document.getElementById('panel-'+p).style.display=(p===b.dataset.panel?'block':'none');});log('Panel khola: '+b.dataset.panel);};});
 document.querySelectorAll('.skill').forEach(function(s){s.onclick=function(){handle(s.dataset.skill==='calc'?'calc 12*8+5':s.dataset.skill==='password'?'password check DemoPass123!':s.dataset.skill);};});
 document.getElementById('sendBtn').onclick=function(){var v=document.getElementById('userInput').value;document.getElementById('userInput').value='';handle(v);};
@@ -238,9 +306,12 @@ document.getElementById('userInput').addEventListener('keydown',function(e){if(e
 document.getElementById('terminateBtn').onclick=function(){terminated=true;stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
 document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
-document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved');};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
+document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.getElementById('creoxBase').value.trim()||creoxBase;creoxKey=document.getElementById('creoxKey').value;testCreoxConnection();};
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
-renderMemory();renderStatus();log('AEGIS PRIME started — v0.4 animated');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+renderMemory();renderStatus();
+(function(){var b=document.getElementById('creoxBase');if(b)b.value=creoxBase;var k=document.getElementById('creoxKey');if(k)k.value=creoxKey;var tg=document.getElementById('creoxBrainToggle');if(tg)tg.checked=creoxBrain;creoxRefreshStatus();})();
+log('AEGIS PRIME started — v0.5 LLM');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>
