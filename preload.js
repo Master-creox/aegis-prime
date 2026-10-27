@@ -1,4 +1,4 @@
-/* AEGIS PRIME v0.7 — preload bridge for local Piper voice.
+/* AEGIS PRIME v0.7.1 — preload bridge for local Piper voice.
    contextBridge only: the renderer gets exactly two functions, no Node APIs. */
 const { contextBridge, ipcRenderer } = require('electron');
 

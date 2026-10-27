@@ -1,4 +1,4 @@
-/* AEGIS PRIME v0.7 — Electron wrapper with local Piper voice (free, offline).
+/* AEGIS PRIME v0.7.1 — Electron wrapper (dual-model Piper; IPC already accepts a model argument, unchanged) with local Piper voice (free, offline).
    The renderer never runs a shell command: it calls the preload bridge, and
    this file runs piper.exe via execFile (argument array, no shell) with the
    text piped on stdin. No user text is ever interpolated into a shell string. */

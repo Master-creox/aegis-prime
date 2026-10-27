@@ -75,7 +75,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span class="pill">v0.7 &bull; PIPER</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.7.1 &bull; PIPER DUAL</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -184,8 +184,12 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🗣️ Piper Local Voice — free, offline (Electron only)</h4>
 <label>Voice Engine</label><select id="voiceEngine"><option value="system">System voice (browser)</option><option value="piper">Piper local — Electron only</option></select>
 <label>Piper exe path (app folder se relative, ya full path)</label><input id="piperExe" value="piper/piper.exe">
-<label>Piper model path (.onnx file)</label><input id="piperModel" value="voices/en_US-lessac-medium.onnx">
-<button class="primary" id="piperTestBtn" type="button">Test Piper Voice</button>
+<label>Piper model path — English (.onnx file)</label><input id="piperModel" value="voices/en_US-lessac-medium.onnx">
+<label>Piper model path — Hindi, Devanagari (.onnx file)</label><input id="piperModelHi" value="voices/hi_IN-pratham-medium.onnx">
+<label>Piper voice language</label><select id="piperLangMode"><option value="auto">Auto — English text English model se, Devanagari Hindi text Hindi model se</option><option value="en">English model hi (hamesha)</option><option value="hi">Hindi model hi (hamesha)</option></select>
+<button class="primary" id="piperTestBtn" type="button">Test Piper Voice (English)</button>
+<button class="primary" id="piperTestHiBtn" type="button">Test Hindi Voice</button>
+<p class="small">Dual-model rule: English text English model se bolega, Devanagari (हिन्दी) text Hindi model se bolega. Roman script me likhi Hinglish (jaise "kya haal hai") Latin aksharon me hoti hai, isliye wo English model se hi bolegi — ye v0.7.1 ki limit hai. Agar chaho to upar Language ko English/Hindi par set karke model force kar sakte ho.</p>
 <p class="small" id="piperStatus">Piper: not tested yet. Chrome me file khol kar Piper nahi chalega — Piper sirf Electron app me chalta hai.</p>
 <p class="small">Piper binary aur voice models kabhi repo me commit nahi hote (gitignore me hain) — unko laptop par alag se install karo, README dekho. Model ke saath uski .onnx.json file bhi chahiye.</p>
 <p class="small">Chrome me aam taur par Google ki voices milti hain, jo Electron ki system voices se kam robotic lagti hain. Voice change karke Test Voice dabao, jo sabse natural lage wahi Save karo.</p>
@@ -307,17 +311,51 @@ function populateVoices(){
 /* v0.7 Piper local voice: free, offline, Electron only. Renderer never runs a
    shell command itself — it only calls the preload bridge, and main.js runs
    piper.exe via execFile with text on stdin (no shell string interpolation). */
-var aegisVoiceEngine='system', aegisPiperExe='piper/piper.exe', aegisPiperModel='voices/en_US-lessac-medium.onnx', piperAudio=null;
+var aegisVoiceEngine='system', aegisPiperExe='piper/piper.exe', aegisPiperModel='voices/en_US-lessac-medium.onnx', aegisPiperModelHi='voices/hi_IN-pratham-medium.onnx', aegisPiperLangMode='auto', piperAudio=null;
 try{var _e=localStorage.getItem('aegis_voice_engine');if(_e)aegisVoiceEngine=_e;}catch(e){}
 try{var _x=localStorage.getItem('aegis_piper_exe');if(_x)aegisPiperExe=_x;}catch(e){}
 try{var _m=localStorage.getItem('aegis_piper_model');if(_m)aegisPiperModel=_m;}catch(e){}
+try{var _mh=localStorage.getItem('aegis_piper_model_hi');if(_mh)aegisPiperModelHi=_mh;}catch(e){}
+try{var _lm=localStorage.getItem('aegis_piper_lang_mode');if(_lm)aegisPiperLangMode=_lm;}catch(e){}
 function piperBridge(){try{return (typeof window!=='undefined' && window.aegisPiper)?window.aegisPiper:null;}catch(e){return null;}}
 function stopPiperAudio(){try{if(piperAudio){piperAudio.pause();piperAudio=null;}}catch(e){}}
-function speakViaPiper(clean,est){
+/* v0.7.1 dual-model Piper: English wale English model se, Hindi wale Hindi model se.
+   DETECTION RULE (documented, simple): HTML tags hatane ke baad, Devanagari
+   aksharon (U+0900-U+097F) ki ginti karo. Agar Devanagari akshar, kul aksharon
+   (Latin + Devanagari) ke 30% se zyada hon, to Hindi model; warna English model.
+   Roman script Hinglish me koi Devanagari akshar nahi hota, isliye wo English
+   model se hi bolegi — ye jaanboojh kar rakhi gayi limit hai, guess nahi. */
+function stripHtmlForSpeech(s){return String(s||'').replace(/<[^>]*>/g,' ');}
+function cleanForPiper(s){
+  var c=stripHtmlForSpeech(s);
+  /* Emoji / symbols hataye — sirf bola jaane wala text Piper ko jaaye.
+     Display wala chat text bilkul nahi badalta, sirf spoken text saaf hota hai. */
+  c=c.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu,'');
+  c=c.replace(/\s+/g,' ').trim();
+  return c;
+}
+function detectLang(s){
+  var plain=stripHtmlForSpeech(s);
+  var dev=(plain.match(/[\u0900-\u097F]/g)||[]).length;
+  var letters=(plain.match(/[A-Za-z\u0900-\u097F]/g)||[]).length;
+  if(!letters) return 'en';
+  return (dev>0 && dev/letters>0.30)?'hi':'en';
+}
+function piperEnglishModel(){var el=document.getElementById('piperModel');return (el&&el.value.trim())||aegisPiperModel;}
+function piperHindiModel(){var el=document.getElementById('piperModelHi');return (el&&el.value.trim())||aegisPiperModelHi;}
+function piperModelFor(text){
+  var mode='auto';var mel=document.getElementById('piperLangMode');if(mel&&mel.value)mode=mel.value;else if(aegisPiperLangMode)mode=aegisPiperLangMode;
+  if(mode==='hi') return piperHindiModel();
+  if(mode==='en') return piperEnglishModel();
+  return detectLang(text)==='hi'?piperHindiModel():piperEnglishModel();
+}
+function speakViaPiper(clean,est,modelOverride){
   var bridge=piperBridge();
   if(!bridge) return Promise.resolve({ok:false,error:'Piper bridge maujood nahi hai (Chrome me file khol kar Piper nahi chalta — Electron app use karo)'});
   var exe=document.getElementById('piperExe').value.trim()||aegisPiperExe;
-  var model=document.getElementById('piperModel').value.trim()||aegisPiperModel;
+  var model=modelOverride||piperModelFor(clean);
+  clean=cleanForPiper(clean);
+  if(!clean) return Promise.resolve({ok:false,error:'Bolne ko koi text nahi bacha (saaf karne ke baad khaali ho gaya)'});
   stopPiperAudio(); speechSynthesis.cancel();
   return bridge.speak(clean,exe,model).then(function(res){
     if(!res||!res.ok||!res.fileUrl) return {ok:false,error:(res&&res.error)||'Piper se audio nahi bana'};
@@ -333,11 +371,31 @@ function speakViaPiper(clean,est){
   }).catch(function(e){return {ok:false,error:(e&&e.message)||'Piper call fail hua'};});
 }
 function speakWithEngine(clean,est){
-  /* Returns true if some voice path started; Piper failures fall back to system voice. */
+  /* Returns true if some voice path started; Piper failures fall back to system voice.
+     Dual-model fallback: chosen model (language ke hisaab se) ki file/JSON na mile
+     to dusra model try karo, phir bhi na mile to system voice. */
   if(aegisVoiceEngine==='piper' && piperBridge()){
-    speakViaPiper(clean,est).then(function(r){
-      if(!r.ok){log('Piper fail hua ('+r.error+') — system voice se bol raha hoon'); if(!speakClean(clean,est)){startLipSync();setTimeout(function(){stopLipSync();},est);}}
-    });
+    (function(){
+      var bridge=piperBridge();
+      var exe=document.getElementById('piperExe').value.trim()||aegisPiperExe;
+      var chosen=piperModelFor(clean);
+      var other=(chosen===piperHindiModel())?piperEnglishModel():piperHindiModel();
+      function fallbackToSystem(reason){log('Piper fail hua ('+reason+') — system voice se bol raha hoon'); if(!speakClean(clean,est)){startLipSync();setTimeout(function(){stopLipSync();},est);}}
+      try{
+        bridge.isAvailable(exe,chosen).then(function(av){
+          if(av&&av.modelExists&&av.modelJsonExists){
+            speakViaPiper(clean,est,chosen).then(function(r){if(!r.ok)fallbackToSystem(r.error);});
+          }else{
+            bridge.isAvailable(exe,other).then(function(av2){
+              if(av2&&av2.modelExists&&av2.modelJsonExists){
+                log('Piper: chuna hua model nahi mila, dusre model se bol raha hoon');
+                speakViaPiper(clean,est,other).then(function(r){if(!r.ok)fallbackToSystem(r.error);});
+              }else{fallbackToSystem('chuna hua model aur dusra model — dono nahi mile');}
+            }).catch(function(){speakViaPiper(clean,est,chosen).then(function(r){if(!r.ok)fallbackToSystem(r.error);});});
+          }
+        }).catch(function(){speakViaPiper(clean,est,chosen).then(function(r){if(!r.ok)fallbackToSystem(r.error);});});
+      }catch(e){speakViaPiper(clean,est,chosen).then(function(r){if(!r.ok)fallbackToSystem(r.error);});}
+    })();
     return true;
   }
   if(aegisVoiceEngine==='piper' && !piperBridge()){
@@ -415,7 +473,7 @@ document.getElementById('userInput').addEventListener('keydown',function(e){if(e
 document.getElementById('terminateBtn').onclick=function(){terminated=true;stopPiperAudio();stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say('Session terminated. Wake dabao to restart karo.');log('TERMINATE dabaya gaya');};
 document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say('Voice sunai nahi diya, type karke bhejo.');};R.start();}catch(e){setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai, type karke bhejo.');}}else{setState('idle','IDLE — READY');say('Voice is browser me supported nahi hai — type karke command bhejo, main sun raha hoon.');}};
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
-document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;aegisPiperModelHi=document.getElementById('piperModelHi').value.trim()||aegisPiperModelHi;aegisPiperLangMode=document.getElementById('piperLangMode').value||'auto';localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);localStorage.setItem('aegis_piper_model_hi',aegisPiperModelHi);localStorage.setItem('aegis_piper_lang_mode',aegisPiperLangMode);}catch(e){}creoxRefreshStatus();renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
 document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.getElementById('creoxBase').value.trim()||creoxBase;creoxKey=document.getElementById('creoxKey').value;testCreoxConnection();};
 document.getElementById('voiceSelect').onchange=function(){aegisVoiceName=this.value;};
 document.getElementById('voiceRate').oninput=function(){aegisVoiceRate=parseFloat(this.value)||0.95;document.getElementById('voiceRateVal').textContent=this.value;};
@@ -430,14 +488,25 @@ document.getElementById('piperTestBtn').onclick=function(){
   var st=document.getElementById('piperStatus');
   if(!piperBridge()){if(st)st.textContent='Piper bridge nahi mila — Piper sirf Electron app me chalta hai, Chrome file-open me nahi. System voice se bol raha hoon.';log('Piper test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
   if(st)st.textContent='Piper test chal raha hai… (pehli baar model load hone me thoda time lag sakta hai)';
-  speakViaPiper(s,4000).then(function(r){
+  speakViaPiper(s,4000,piperEnglishModel()).then(function(r){
     if(r.ok){if(st)st.textContent='Piper test OK — local neural voice chal rahi hai.';log('Piper test OK');}
     else{if(st)st.textContent='Piper test fail: '+r.error+' — system voice fallback.';log('Piper test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
   });
 };
+document.getElementById('piperTestHiBtn').onclick=function(){
+  var s='नमस्ते, मैं AEGIS PRIME हूँ। यह मेरी हिंदी आवाज़ है।';
+  var st=document.getElementById('piperStatus');
+  if(!piperBridge()){if(st)st.textContent='Piper bridge nahi mila — Piper sirf Electron app me chalta hai, Chrome file-open me nahi. System voice se bol raha hoon.';log('Piper Hindi test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
+  if(st)st.textContent='Piper Hindi test chal raha hai… (pehli baar model load hone me thoda time lag sakta hai)';
+  speakViaPiper(s,4000,piperHindiModel()).then(function(r){
+    if(r.ok){if(st)st.textContent='Piper Hindi test OK — Hindi model chal raha hai.';log('Piper Hindi test OK');}
+    else{if(st)st.textContent='Piper Hindi test fail: '+r.error+' — system voice fallback.';log('Piper Hindi test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
+  });
+};
 document.getElementById('voiceEngine').onchange=function(){aegisVoiceEngine=this.value;};
-(function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;populateVoices();})();
-log('AEGIS PRIME started — v0.7 PIPER');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+document.getElementById('piperLangMode').onchange=function(){aegisPiperLangMode=this.value;};
+(function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;var pmh=document.getElementById('piperModelHi');if(pmh)pmh.value=aegisPiperModelHi;var plm=document.getElementById('piperLangMode');if(plm)plm.value=aegisPiperLangMode;populateVoices();})();
+log('AEGIS PRIME started — v0.7.1 PIPER DUAL');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>
