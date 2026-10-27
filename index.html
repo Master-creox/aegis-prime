@@ -5,43 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AEGIS PRIME — Personal AI HUD</title>
 <style>
-:root{--accent:#00e5ff;--accent2:#00ff9d;--red:#ff2d55;--bg:#02070f;--panel:#071423;--line:#123a52;--text:#dff6ff;--muted:#7fb3c8}
+:root{--accent:#00e5ff;--accent2:#00ff9d;--red:#ff2d55;--bg:#010409;--panel:rgba(10,25,40,.82);--line:rgba(0,229,255,.22);--text:#e6fbff;--muted:#7fb3c8}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:#04101d}
-header b{letter-spacing:2px}
-header span{color:var(--muted);font-size:13px}
-main{display:grid;grid-template-columns:190px 1fr 270px;gap:12px;padding:12px;max-width:1300px;margin:0 auto}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-.side button{display:block;width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:#0a1e30;color:var(--text);cursor:pointer;text-align:left;font-weight:700;letter-spacing:1px}
-.side button.active{background:var(--accent);color:#00131c}
-.orb-wrap{text-align:center;padding:10px 0}
-.orb{width:150px;height:150px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff, var(--accent) 35%, #003a5e 70%, #00121f);box-shadow:0 0 40px var(--accent);animation:pulse 3s infinite}
-.orb.listening{animation:pulse .8s infinite;box-shadow:0 0 50px var(--accent2)}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(900px 500px at 70% -10%,rgba(0,229,255,.16),transparent 60%),radial-gradient(700px 500px at 10% 110%,rgba(0,255,157,.10),transparent 60%),var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(0,229,255,.12),transparent 40%,transparent 60%,rgba(0,255,157,.10));backdrop-filter:blur(6px)}
+header b{letter-spacing:3px;font-size:18px;text-shadow:0 0 18px var(--accent)}
+header span{color:var(--muted);font-size:13px;letter-spacing:1px}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:12px;letter-spacing:1px}
+main{display:grid;grid-template-columns:212px 1fr 308px;gap:14px;padding:14px;height:calc(100vh - 57px)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);overflow:auto}
+.panel h3{margin:4px 0 12px;letter-spacing:2px;font-size:14px;color:var(--accent)}
+.side button{display:block;width:100%;margin:7px 0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,229,255,.06);color:var(--text);cursor:pointer;text-align:left;font-weight:700;letter-spacing:1px;transition:.15s}
+.side button:hover{border-color:var(--accent);box-shadow:0 0 14px rgba(0,229,255,.25)}
+.side button.active{background:var(--accent);color:#00131c;box-shadow:0 0 22px rgba(0,229,255,.55)}
+.orb-wrap{text-align:center;padding:6px 0 12px}
+.orb-ring{width:216px;height:216px;margin:0 auto;border-radius:50%;padding:10px;background:conic-gradient(from 0deg,var(--accent),transparent 30%,var(--accent2),transparent 65%,var(--accent));animation:ringspin 9s linear infinite}
+@keyframes ringspin{to{transform:rotate(360deg)}}
+.orb{width:196px;height:196px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 32%,#ffffff, var(--accent) 38%, #003a5e 72%, #00121f);box-shadow:0 0 55px var(--accent),inset 0 0 30px rgba(255,255,255,.35);animation:pulse 3s infinite}
+.orb.listening{animation:pulse .8s infinite;box-shadow:0 0 65px var(--accent2)}
 .orb.thinking{animation:spin 1.2s linear infinite}
 .orb.terminated{background:radial-gradient(circle at 35% 35%,#888,#333 60%,#111);box-shadow:none;animation:none}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes spin{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
-#stateLine{color:var(--accent2);font-weight:700;letter-spacing:2px;margin-top:10px}
-#chat{height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;background:#03101c;margin:10px 0;text-align:left}
-.msg{margin:8px 0;line-height:1.45}
+#stateLine{color:var(--accent2);font-weight:800;letter-spacing:3px;margin-top:14px;font-size:14px}
+#chat{height:280px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(3,16,28,.9);margin:12px 0;text-align:left}
+.msg{margin:9px 0;line-height:1.5}
 .msg b{color:var(--accent)}
 .badge{display:inline-block;font-size:11px;border:1px solid var(--accent);color:var(--accent);border-radius:20px;padding:1px 8px;margin-left:6px}
-input,select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#03101c;color:var(--text);margin:6px 0}
-button.primary{background:var(--accent);border:none;color:#00131c;font-weight:800;padding:10px 16px;border-radius:8px;cursor:pointer}
-button.danger{background:transparent;border:2px solid var(--red);color:var(--red);font-weight:800;padding:9px 16px;border-radius:8px;cursor:pointer}
-.row{display:flex;gap:8px}
+input,select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:#03101c;color:var(--text);margin:6px 0}
+button.primary{background:var(--accent);border:none;color:#00131c;font-weight:800;padding:11px 18px;border-radius:10px;cursor:pointer;box-shadow:0 0 18px rgba(0,229,255,.35)}
+button.danger{background:transparent;border:2px solid var(--red);color:var(--red);font-weight:800;padding:10px 18px;border-radius:10px;cursor:pointer}
+.row{display:flex;gap:10px}
 .row input{flex:1}
-.skill{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0;background:#081c2e;cursor:pointer}
-.log{font-size:13px;color:var(--muted);line-height:1.5}
+.skill{border:1px solid var(--line);border-radius:10px;padding:10px;margin:7px 0;background:rgba(0,229,255,.05);cursor:pointer}
+.skill:hover{border-color:var(--accent)}
+.log{font-size:13px;color:var(--muted);line-height:1.6;font-family:Consolas,monospace}
 .log b{color:var(--text)}
 .small{font-size:13px;color:var(--muted)}
-.agent{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
-@media(max-width:900px){main{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}}
+.agent{border:1px solid var(--line);border-radius:10px;padding:10px;margin:7px 0}
+@media(max-width:900px){main{grid-template-columns:1fr;height:auto}.side{display:grid;grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<header><div><b>AEGIS PRIME</b> <span>v0.1 &bull; Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
+<header><div><b>AEGIS PRIME</b> <span class="pill">v0.2 &bull; REDESIGN</span> <span>Personal AI HUD</span></div><div><span id="clock">--:--</span> &nbsp; <span id="netStatus">● ONLINE</span></div></header>
 <main>
 <section class="panel side">
 <h3>CONTROL</h3>
@@ -54,8 +61,8 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <p class="small">Video wale HUD jaisa layout: left me MEMORY / SKILLS / CHARACTER / SETTING, centre me AI core, right me live log.</p>
 </section>
 <section class="panel">
-<div class="orb-wrap">
-<div id="orb" class="orb"></div>
+<div class="orb-wrap"><div class="small" style="letter-spacing:3px">● AI CORE &nbsp;•&nbsp; LIVE HUD</div>
+<div class="orb-ring"><div id="orb" class="orb"></div></div>
 <div id="stateLine">IDLE — READY</div>
 <div style="margin-top:10px" class="row">
 <button class="primary" id="wakeBtn">🎤 WAKE / LISTEN</button>
@@ -139,7 +146,7 @@ document.getElementById('wakeBtn').onclick=function(){terminated=false;setState(
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm('Saari memory clear kar dun?')){facts=[];notes=[];save();say('Memory clear ho gayi.');}};
 document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);renderStatus();say('Settings save ho gayi. AI ka naam: '+document.getElementById('aiName').value);log('Settings saved');};
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
-renderMemory();renderStatus();log('AEGIS PRIME started — v0.1');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+renderMemory();renderStatus();log('AEGIS PRIME started — v0.2 redesign');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>

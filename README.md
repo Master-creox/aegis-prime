@@ -1,4 +1,4 @@
-# AEGIS PRIME — Personal AI HUD (v0.1)
+# AEGIS PRIME — Personal AI HUD (v0.2 redesign)
 
 A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic AI" Reel Akash shared on 2026-10-25 — built as original code, not a copy of that creator's project. Open `index.html` in any modern browser. No server, no API key, no install needed. Chat, memory and notes are stored only in the browser's localStorage on the user's own device.
 
@@ -19,6 +19,17 @@ A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic 
 
 1. Open `index.html`.
 2. Type `help`, then try: `time`, `calc 12*8`, `password check MyPass123`, `remember that my laptop is at repair`, `recall laptop`, `tip`, `system`.
+
+## v0.2 redesign (2026-10-27)
+
+Full-window HUD redesign, same working features: bigger AI core with a
+rotating neon ring, glass panels, full-height three-panel layout, and a
+clearer top bar. No feature was removed and no IDs/logic changed — chat,
+memory, skills, character, settings, agents, WAKE/TERMINATE and the live
+log work exactly as in v0.1. The brain is still rule-based (not a real
+LLM) and Electron voice still uses the browser speech service, which can
+fail in Electron — see the voice note in the desktop section. Real brain
+and real voice are separate next phases, not claimed here.
 
 ## Desktop app (Electron wrapper)
 
