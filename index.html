@@ -201,7 +201,7 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 var state='idle', terminated=false;
 var facts=JSON.parse(localStorage.getItem('aegis_facts')||'[]');
 var notes=JSON.parse(localStorage.getItem('aegis_notes')||'[]');
-/* v0.5 LLM brain — Master CreoX API (own API, never a hardcoded key) */
+/* v0.5.1 LLM brain — Master CreoX API (own API, never a hardcoded key) */
 var creoxBase=(localStorage.getItem('aegis_creox_base')||'https://master-creox-api.onrender.com').trim();
 var creoxKey=localStorage.getItem('aegis_creox_key')||'';
 var creoxBrain=localStorage.getItem('aegis_creox_brain')==='1';
@@ -240,7 +240,7 @@ function testCreoxConnection(){
   });
 }
 function isLocalCommand(low){
-  return low==='help'||/^(time|samay|date)/.test(low)||low.indexOf('system')===0||low.indexOf('tip')===0||low.indexOf('calc ')===0||low.indexOf('password check ')===0||/remember that |yaad rakho /.test(low)||low.indexOf('recall ')===0||low.indexOf('what is ')===0||low.indexOf('note ')===0;
+  return low==='help'||/^(time|samay|date)/.test(low)||low.indexOf('system')===0||low.indexOf('tip')===0||low.indexOf('calc ')===0||low.indexOf('password check ')===0||/remember that |yaad rakho /.test(low)||low.indexOf('recall ')===0||low.indexOf('note ')===0;
 }
 function save(){localStorage.setItem('aegis_facts',JSON.stringify(facts));localStorage.setItem('aegis_notes',JSON.stringify(notes));renderMemory();renderStatus();}
 function log(t){var d=document.getElementById('log');d.innerHTML='<div><b>'+new Date().toLocaleTimeString()+'</b> — '+t+'</div>'+d.innerHTML;}
@@ -262,6 +262,7 @@ if(terminated){say('Session terminated hai. Wake dabao, phir se start karte hain
 var q=raw.trim();if(!q)return;userMsg(q);log('Message → Agent: '+agentFor(q));setState('thinking','THINKING…');
 setTimeout(function(){
 var agent=agentFor(q), low=q.toLowerCase(), reply='';
+if(low.indexOf('what is ')===0){var _k=low.replace('what is ','');var _hit=facts.find(function(f){return f.toLowerCase().indexOf(_k)>=0;});if(_hit){say('<span class="badge">Scout</span> '+styleReply('🧠 Memory me mila: '+_hit));log('Reply via local memory');setState('idle','IDLE — READY');return;}}
 if(!isLocalCommand(low) && creoxBrainOn()){
   setState('thinking','THINKING — CREOX BRAIN…');
   log('CreoX brain se pooch raha hoon… (Render sleep ho to pehli request ~1 min lag sakti hai)');
@@ -289,7 +290,7 @@ else if(low.indexOf('tip')===0){var tips=['Kabhi bhi OTP kisi se share mat karo 
 else if(low.indexOf('calc ')===0){var expr=low.slice(5).replace(/[^0-9+\-*/(). ]/g,'');try{reply='🧮 '+expr+' = '+(Function('return ('+expr+')')());}catch(e){reply='Calc samajh nahi aaya. Example: calc 12*8+5';}}
 else if(low.indexOf('password check ')===0){var p=q.slice(15).trim(), s=passwordScore(p);reply='🔐 Password score: '+s+'/5. '+(s>=4?'Strong lag raha hai.':s>=2?'Medium hai — lamba karo aur symbol + number add karo.':'Weak hai — kam se kam 12 characters, upper + lower + number + symbol rakho.');}
 else if(/remember that |yaad rakho /.test(low)){var f=q.replace(/.*?(remember that |yaad rakho )/i,'');facts.push(f);save();reply='🧠 Yaad rakh liya: '+f;}
-else if(low.indexOf('recall ')===0||low.indexOf('what is ')===0){var key=low.replace(/recall |what is /,'');var hit=facts.find(function(f){return f.toLowerCase().indexOf(key)>=0;});reply=hit?('🧠 Memory me mila: '+hit):'Is baare me memory me kuch nahi mila. Pehle "remember that …" se save karo.';}
+else if(low.indexOf('recall ')===0){var key=low.replace(/recall /,'');var hit=facts.find(function(f){return f.toLowerCase().indexOf(key)>=0;});reply=hit?('🧠 Memory me mila: '+hit):'Is baare me memory me kuch nahi mila. Pehle "remember that …" se save karo.';}
 else if(low.indexOf('note ')===0){notes.push(q.slice(5));save();reply='📝 Note save ho gaya.';}
 else if(agent==='Guard'){reply='🛡️ Guard: Ye security se juda sawaal hai. Basic rule — unknown link/attachment mat kholo, OTP share mat karo, aur password check ke liye "password check &lt;pass&gt;" likho. (Ye demo brain hai, real threat scan nahi karta.)';}
 else if(agent==='Sage'){reply='📚 Sage: "'+q+'" — iska short jawab: ye topic mere built-in knowledge me detail me nahi hai, isliye main guess nahi karunga. Specific command try karo: help, tip, system, ya time.';}
@@ -311,7 +312,7 @@ document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.ge
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
 renderMemory();renderStatus();
 (function(){var b=document.getElementById('creoxBase');if(b)b.value=creoxBase;var k=document.getElementById('creoxKey');if(k)k.value=creoxKey;var tg=document.getElementById('creoxBrainToggle');if(tg)tg.checked=creoxBrain;creoxRefreshStatus();})();
-log('AEGIS PRIME started — v0.5 LLM');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+log('AEGIS PRIME started — v0.5.1 LLM');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
 </script>
 </body>
 </html>

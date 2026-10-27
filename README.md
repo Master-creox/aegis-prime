@@ -1,3 +1,7 @@
+## v0.5.1 fix (2026-10-27)
+
+Bug fix: 'What is ...?' questions were treated as local memory lookups, so they never reached the CreoX brain (reply was 'memory me kuch nahi mila'). Now: if the question matches a saved local fact, memory answers first; otherwise the question goes to the CreoX brain when it is ON. Test with 'What is phishing?' — it should now reply 'via CreoX brain'.
+
 # Aegis Prime — Personal AI HUD (v0.5 LLM)
 
 Single-file HUD (`index.html`) with an animated SVG swordsman character
