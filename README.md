@@ -1,3 +1,73 @@
+## v0.8.0 local STT — WAKE Error -2 fix (2026-10-27)
+
+### The problem this fixes
+In Electron, WAKE used browser SpeechRecognition, which uploads mic audio to a
+cloud speech service that Electron has no key for — so it failed with
+`chunked_data_pipe_upload_data_stream.cc(217) OnSizeReceived failed with Error: -2`.
+Piper (speaking, output) was already local and unaffected; this was the INPUT
+(listening) side. v0.8.0 removes the cloud call from the Electron WAKE path
+entirely: the mic is recorded in the app to a 16 kHz mono WAV and transcribed
+on the laptop by Python + Vosk (offline). Nothing is uploaded anywhere.
+
+### Laptop install steps (one at a time, in this order)
+1. **Python** — install Python 3.10 or 3.11 from python.org. During install,
+   tick "Add python.exe to PATH". Check in Command Prompt: `py --version`
+   (if `py` is missing, `python --version` also works — the app tries
+   `py`, then `python`, then `python3`).
+2. **Vosk package** — in Command Prompt:
+   `py -m pip install vosk`
+   (if `py` is missing, use `python -m pip install vosk`.)
+3. **Models** — from https://alphacephei.com/vosk/models download:
+   - English: `vosk-model-small-en-us-0.15.zip`
+     (https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip)
+   - Hindi: `vosk-model-small-hi-0.22.zip`
+     (https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip)
+   Unzip each, and place the folders here (rename them to exactly `en` / `hi`):
+   - `C:\Users\Master_Creox\aegis-prime\stt-models\en\`
+   - `C:\Users\Master_Creox\aegis-prime\stt-models\hi\`
+   Each folder must contain the model files (e.g. `am`, `conf`, `graph`
+   subfolders/files) — do NOT put the zip itself in there, and do NOT nest
+   an extra folder inside (wrong: `stt-models\en\vosk-model-small-en-us-0.15\…`).
+4. **Run the app** — in `C:\Users\Master_Creox\aegis-prime`:
+   `git pull` then `npm start`.
+5. **Check** — SETTING → STT Engine = Auto (default) → Save Settings →
+   **Test Local STT Setup**. It must say "Local STT ready" (English model
+   found; Hindi model found if you installed it). Then press **WAKE**, speak
+   for a few seconds, press WAKE again to stop early (or wait 10 seconds —
+   it stops by itself), and your words should appear as a chat message.
+
+### How WAKE now works
+- **Electron (the app)**: WAKE → mic recorded locally → 16 kHz mono WAV →
+  `stt_transcribe.py` (in the app folder, committed code) → Vosk model →
+  transcript goes into the chat and is answered. Browser SpeechRecognition
+  is never called in Electron, so Error -2 cannot occur on this path.
+- **Chrome (file-open, no Electron bridge)**: WAKE keeps the old browser
+  SpeechRecognition path (Chrome has the cloud service built in, so it
+  works there). With STT Engine = "Local STT hi", Chrome instead falls back
+  to typing with an honest message, because local STT needs the app.
+- **If local STT is missing or fails** (no Python, no vosk, no model, empty
+  recording): WAKE shows an honest reason in the log/status and asks you to
+  type — it never invents a transcript, never loops, never crashes.
+
+### Language rule (same as Piper, dual-model principle)
+English speech → English model, Hindi speech → Hindi model, chosen from the
+Language dropdown (SETTING → Piper voice language): Hindi always → Hindi
+model, otherwise English model. **Auto limitation, honestly:** spoken
+language cannot be known before transcription, so Auto defaults to English
+for STT. If you speak Hindi, set Language to **Hindi always** first.
+
+### Honest limits
+- First transcription per model is slower (model load; 60s timeout).
+- Vosk small models are moderate-accuracy, not cloud-grade: speak clearly,
+  close to the mic, in a quiet room; technical words and names may be
+  misheard. The bigger Vosk models are more accurate but much larger.
+- Transcripts come out lowercase without punctuation — that is normal for
+  small Vosk models; commands still work (the app lowercases commands anyway).
+- STT is Electron-only, like Piper. Chrome file-open cannot run local
+  programs, so Chrome WAKE stays on browser recognition.
+- `stt-models/`, `*.wav`, `*.onnx`, `*.onnx.json`, `piper/`, `voices/` are
+  gitignored — models and audio are never committed to the repo.
+
 ## v0.7.3 PURE-language system replies (2026-10-27)
 
 Akash's principle, stated twice: "Hindi matlab Hindi hota hai, English matlab

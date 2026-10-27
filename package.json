@@ -1,7 +1,7 @@
 {
   "name": "aegis-prime",
-  "version": "0.7.3",
-  "description": "AEGIS PRIME — Personal AI HUD (desktop app, Electron wrapper around index.html, with dual-model local Piper voice: English + Hindi)",
+  "version": "0.8.0",
+  "description": "AEGIS PRIME \u2014 Personal AI HUD (desktop app, Electron wrapper around index.html, with dual-model local Piper voice: English + Hindi, and local Vosk speech-to-text for WAKE)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

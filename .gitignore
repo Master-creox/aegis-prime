@@ -6,3 +6,5 @@ voices/
 *.wav
 *.onnx
 *.onnx.json
+# Local Vosk STT — models are installed on the laptop, never committed
+stt-models/

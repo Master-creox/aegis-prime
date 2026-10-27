@@ -191,6 +191,13 @@ button.danger{background:transparent;border:2px solid var(--red);color:var(--red
 <button class="primary" id="piperTestHiBtn" type="button">Test Hindi Voice</button>
 <p class="small">Dual-model rule: English text English model se bolega, Devanagari (हिन्दी) text Hindi model se bolega. Roman script me likhi Hinglish (jaise "kya haal hai") Latin aksharon me hoti hai, isliye wo English model se hi bolegi — ye v0.7.1 ki limit hai. Agar chaho to upar Language ko English/Hindi par set karke model force kar sakte ho.</p>
 <p class="small" id="piperStatus">Piper: not tested yet. Chrome me file khol kar Piper nahi chalega — Piper sirf Electron app me chalta hai.</p>
+<h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🎤 Local Speech-to-Text (WAKE) — Vosk, offline (Electron only)</h4>
+<label>STT Engine</label><select id="sttEngine"><option value="auto">Auto — Electron me local STT, Chrome me browser voice</option><option value="local">Local STT hi (Electron) — Chrome me typing fallback</option></select>
+<label>STT model folder — English (app folder se relative, ya full path)</label><input id="sttModelEn" value="stt-models/en">
+<label>STT model folder — Hindi (app folder se relative, ya full path)</label><input id="sttModelHi" value="stt-models/hi">
+<button class="primary" id="sttTestBtn" type="button">Test Local STT Setup</button>
+<p class="small" id="sttStatus">STT: not tested yet. Electron me WAKE ab browser SpeechRecognition use nahi karta (wahi Error -2 deta tha) — WAKE mic ko local Vosk model se text me badalta hai, cloud par kuch nahi jaata.</p>
+<p class="small">STT language rule: Language dropdown hi decide karta hai — Hindi always par Hindi model, warna English model. Auto me spoken language pehle se pata nahi hoti, isliye Auto me English model hi chalta hai — Hindi bolna ho to Language ko Hindi always par set karo. Vosk small models ki accuracy moderate hoti hai, cloud-grade nahi.</p>
 <p class="small">Piper binary aur voice models kabhi repo me commit nahi hote (gitignore me hain) — unko laptop par alag se install karo, README dekho. Model ke saath uski .onnx.json file bhi chahiye.</p>
 <p class="small">Chrome me aam taur par Google ki voices milti hain, jo Electron ki system voices se kam robotic lagti hain. Voice change karke Test Voice dabao, jo sabse natural lage wahi Save karo.</p>
 <h4 style="margin:14px 0 4px;letter-spacing:1px;color:var(--accent)">🧠 LLM Brain — Master CreoX API</h4>
@@ -317,6 +324,10 @@ try{var _x=localStorage.getItem('aegis_piper_exe');if(_x)aegisPiperExe=_x;}catch
 try{var _m=localStorage.getItem('aegis_piper_model');if(_m)aegisPiperModel=_m;}catch(e){}
 try{var _mh=localStorage.getItem('aegis_piper_model_hi');if(_mh)aegisPiperModelHi=_mh;}catch(e){}
 try{var _lm=localStorage.getItem('aegis_piper_lang_mode');if(_lm)aegisPiperLangMode=_lm;}catch(e){}
+var aegisSttEngine='auto', aegisSttModelEn='stt-models/en', aegisSttModelHi='stt-models/hi';
+try{var _se=localStorage.getItem('aegis_stt_engine');if(_se)aegisSttEngine=_se;}catch(e){}
+try{var _sme=localStorage.getItem('aegis_stt_model_en');if(_sme)aegisSttModelEn=_sme;}catch(e){}
+try{var _smh=localStorage.getItem('aegis_stt_model_hi');if(_smh)aegisSttModelHi=_smh;}catch(e){}
 function piperBridge(){try{return (typeof window!=='undefined' && window.aegisPiper)?window.aegisPiper:null;}catch(e){return null;}}
 function stopPiperAudio(){try{if(piperAudio){piperAudio.pause();piperAudio=null;}}catch(e){}}
 /* v0.7.1 dual-model Piper: English wale English model se, Hindi wale Hindi model se.
@@ -461,7 +472,13 @@ var PURELANG = {
     piperHindiTesting: 'Piper Hindi test running… (The first run may take a little time while the model loads)',
     piperHindiTestOk: 'Piper Hindi test OK — Hindi model is running.',
     piperHindiTestFailPrefix: 'Piper Hindi test failed: ',
-    piperHindiTestFailSuffix: ' — system voice fallback.'
+    piperHindiTestFailSuffix: ' — system voice fallback.',
+    sttListening: 'Listening locally — speak now. Press WAKE again to stop.',
+    sttUnavailable: 'Local speech-to-text is not set up in this app — please type your message. See the README install steps for Python and the Vosk models.',
+    sttEmpty: 'I could not hear any speech. Please try again or type your message.',
+    sttFailed: 'Local speech-to-text failed. Please type your message.',
+    sttReady: 'Local STT ready — Python and the selected model were found.',
+    sttNotReady: 'Local STT is not ready — check Python and the model folders (see README).'
   },
   hi: {
     settingsSaved: 'सेटिंग्स सहेजी गईं। AI का नाम: ',
@@ -498,7 +515,13 @@ var PURELANG = {
     piperHindiTesting: 'Piper हिंदी परीक्षण चल रहा है… (पहली बार मॉडल लोड होने में थोड़ा समय लग सकता है)',
     piperHindiTestOk: 'Piper हिंदी परीक्षण ठीक है — हिंदी मॉडल चल रहा है।',
     piperHindiTestFailPrefix: 'Piper हिंदी परीक्षण विफल हुआ: ',
-    piperHindiTestFailSuffix: ' — सिस्टम आवाज़ से बोल रहा हूँ।'
+    piperHindiTestFailSuffix: ' — सिस्टम आवाज़ से बोल रहा हूँ।',
+    sttListening: 'स्थानीय रूप से सुन रहा हूँ — अब बोलें। रोकने के लिए फिर से Wake दबाएँ।',
+    sttUnavailable: 'इस ऐप में स्थानीय स्पीच-टू-टेक्स्ट सेट नहीं है — कृपया टाइप करके भेजें। Python और Vosk मॉडल के लिए README देखें।',
+    sttEmpty: 'कोई आवाज़ सुनाई नहीं दी। कृपया फिर से बोलें या टाइप करके भेजें।',
+    sttFailed: 'स्थानीय स्पीच-टू-टेक्स्ट विफल हुआ। कृपया टाइप करके भेजें।',
+    sttReady: 'स्थानीय STT तैयार है — Python और चुना हुआ मॉडल मिल गया है।',
+    sttNotReady: 'स्थानीय STT तैयार नहीं है — Python और मॉडल फ़ोल्डर जाँचें (README देखें)।'
   }
 };
 function replyLang(){var m='auto';try{var el=document.getElementById('piperLangMode');if(el&&el.value)m=el.value;else if(typeof aegisPiperLangMode!=='undefined'&&aegisPiperLangMode)m=aegisPiperLangMode;}catch(e){}return m==='hi'?'hi':'en';}
@@ -558,9 +581,67 @@ document.querySelectorAll('.skill').forEach(function(s){s.onclick=function(){han
 document.getElementById('sendBtn').onclick=function(){var v=document.getElementById('userInput').value;document.getElementById('userInput').value='';handle(v);};
 document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=e.target.value;e.target.value='';handle(v);}});
 document.getElementById('terminateBtn').onclick=function(){terminated=true;stopPiperAudio();stopLipSync();if('speechSynthesis' in window)speechSynthesis.cancel();setState('terminated','TERMINATED');say(t('terminatedRestart'));log('TERMINATE dabaya gaya');};
-document.getElementById('wakeBtn').onclick=function(){terminated=false;setState('listening','LISTENING…');log('Wake — listening');if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say(t('voiceNotHeard'));};R.start();}catch(e){setState('idle','IDLE — READY');say(t('voiceNotSupported'));}}else{setState('idle','IDLE — READY');say(t('voiceNotSupportedListening'));}};
+/* v0.8.0 LOCAL STT (Vosk, offline) — Electron WAKE no longer touches browser
+   SpeechRecognition, which is what threw Error -2 (it uploads audio to a cloud
+   service Electron has no key for). In Electron the mic is recorded to a
+   16 kHz mono WAV and transcribed locally by Python+Vosk via the bridge.
+   Chrome (no bridge) keeps the old browser-recognition path. Any local-STT
+   failure falls back to typing with an honest message — never a fake
+   transcript, never a loop, never a crash. Language: the same Language
+   dropdown as Piper — Hindi always -> Hindi model, otherwise English model.
+   Auto cannot know the spoken language in advance, so Auto defaults to
+   English for STT; for Hindi speech set Language to Hindi always. */
+function sttBridge(){try{return (typeof window!=='undefined'&&window.aegisStt)?window.aegisStt:null;}catch(e){return null;}}
+function sttModelFor(){var hiEl=document.getElementById('sttModelHi');var enEl=document.getElementById('sttModelEn');if(replyLang()==='hi')return (hiEl&&hiEl.value.trim())||aegisSttModelHi;return (enEl&&enEl.value.trim())||aegisSttModelEn;}
+function sttEngineVal(){var el=document.getElementById('sttEngine');return (el&&el.value)||aegisSttEngine||'auto';}
+function encodeWav16(samples,rate){var len=samples.length;var buf=new ArrayBuffer(44+len*2);var v=new DataView(buf);function str(off,s){for(var i=0;i<s.length;i++)v.setUint8(off+i,s.charCodeAt(i));}str(0,'RIFF');v.setUint32(4,36+len*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,len*2,true);for(var i=0;i<len;i++){var s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7FFF,true);}return new Uint8Array(buf);}
+function resampleTo16k(samples,rate){if(rate===16000)return samples;var ratio=rate/16000;var outLen=Math.floor(samples.length/ratio);var out=new Float32Array(outLen);for(var i=0;i<outLen;i++){var pos=i*ratio;var i0=Math.floor(pos);var frac=pos-i0;var a=samples[i0]||0;var b=samples[Math.min(i0+1,samples.length-1)]||0;out[i]=a+(b-a)*frac;}return out;}
+function bytesToBase64(bytes){var s='';var CH=0x8000;for(var i=0;i<bytes.length;i+=CH){s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));}return btoa(s);}
+var sttStream=null, sttCtx=null, sttProc=null, sttChunks=[], sttTimer=null, sttActive=false;
+function startLocalStt(){
+  var bridge=sttBridge();
+  if(!bridge||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setState('idle','IDLE — READY');say(t('sttUnavailable'));log('Wake: local STT unavailable — typing fallback');return;}
+  terminated=false;setState('listening','LISTENING (local STT)…');say(t('sttListening'));log('Wake — local STT listening (no cloud service)');
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    sttStream=stream;sttChunks=[];sttActive=true;
+    sttCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+    var src=sttCtx.createMediaStreamSource(stream);
+    sttProc=sttCtx.createScriptProcessor(4096,1,1);
+    sttProc.onaudioprocess=function(ev){sttChunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));};
+    var mute=sttCtx.createGain();mute.gain.value=0;
+    src.connect(sttProc);sttProc.connect(mute);mute.connect(sttCtx.destination);
+    sttTimer=setTimeout(function(){stopLocalStt();},10000);
+  }).catch(function(e){sttActive=false;setState('idle','IDLE — READY');say(t('sttUnavailable'));log('Wake: mic permission/denied — typing fallback');});
+}
+function stopLocalStt(){
+  if(!sttActive)return;sttActive=false;
+  if(sttTimer){clearTimeout(sttTimer);sttTimer=null;}
+  try{if(sttProc)sttProc.disconnect();}catch(e){}
+  try{if(sttStream)sttStream.getTracks().forEach(function(tr){tr.stop();});}catch(e){}
+  var rate=sttCtx?sttCtx.sampleRate:16000;
+  try{if(sttCtx)sttCtx.close();}catch(e){}
+  var total=0;sttChunks.forEach(function(c){total+=c.length;});
+  var all=new Float32Array(total);var off=0;sttChunks.forEach(function(c){all.set(c,off);off+=c.length;});
+  var wav=encodeWav16(resampleTo16k(all,rate),16000);
+  var bridge=sttBridge();
+  if(!bridge){setState('idle','IDLE — READY');say(t('sttUnavailable'));return;}
+  setState('thinking','TRANSCRIBING (local STT)…');log('Wake — transcribing locally with Vosk');
+  bridge.transcribe(sttModelFor(),bytesToBase64(wav)).then(function(r){
+    if(r&&r.ok&&r.text&&r.text.trim()){setState('idle','IDLE — READY');handle(r.text.trim());}
+    else if(r&&r.ok){setState('idle','IDLE — READY');say(t('sttEmpty'));log('Wake: local STT heard no speech');}
+    else{setState('idle','IDLE — READY');say(t('sttFailed'));log('Wake: local STT failed ('+(r&&r.error?r.error:'unknown')+') — typing fallback');}
+  }).catch(function(e){setState('idle','IDLE — READY');say(t('sttFailed'));log('Wake: local STT bridge error — typing fallback');});
+}
+document.getElementById('wakeBtn').onclick=function(){
+  if(sttActive){stopLocalStt();return;}
+  terminated=false;
+  if(sttBridge()){startLocalStt();return;}
+  if(sttEngineVal()==='local'){setState('idle','IDLE — READY');say(t('sttUnavailable'));log('Wake: local STT chosen but no Electron bridge (Chrome) — typing fallback');return;}
+  setState('listening','LISTENING…');log('Wake — browser listening (Chrome path)');
+  if('SpeechRecognition' in window||'webkitSpeechRecognition' in window){try{var R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang=(replyLang()==='hi')?'hi-IN':'en-IN';R.onresult=function(ev){handle(ev.results[0][0].transcript);};R.onerror=function(){setState('idle','IDLE — READY');say(t('voiceNotHeard'));};R.start();}catch(e){setState('idle','IDLE — READY');say(t('voiceNotSupported'));}}else{setState('idle','IDLE — READY');say(t('voiceNotSupportedListening'));}
+};
 document.getElementById('clearMemoryBtn').onclick=function(){if(confirm(t('confirmClearMemory'))){facts=[];notes=[];save();say(t('memoryCleared'));}};
-document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;aegisPiperModelHi=document.getElementById('piperModelHi').value.trim()||aegisPiperModelHi;aegisPiperLangMode=document.getElementById('piperLangMode').value||'auto';localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);localStorage.setItem('aegis_piper_model_hi',aegisPiperModelHi);localStorage.setItem('aegis_piper_lang_mode',aegisPiperLangMode);}catch(e){}creoxRefreshStatus();renderStatus();say(t('settingsSaved')+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
+document.getElementById('saveSettingsBtn').onclick=function(){var a=document.getElementById('accentSelect').value;document.documentElement.style.setProperty('--accent',a);creoxBase=document.getElementById('creoxBase').value.trim()||'https://master-creox-api.onrender.com';creoxKey=document.getElementById('creoxKey').value;creoxBrain=document.getElementById('creoxBrainToggle').checked;aegisVoiceName=document.getElementById('voiceSelect').value||aegisVoiceName;aegisVoiceRate=parseFloat(document.getElementById('voiceRate').value)||0.95;aegisVoicePitch=parseFloat(document.getElementById('voicePitch').value)||1.05;try{localStorage.setItem('aegis_creox_base',creoxBase);localStorage.setItem('aegis_creox_key',creoxKey);localStorage.setItem('aegis_creox_brain',creoxBrain?'1':'0');localStorage.setItem('aegis_voice_name',aegisVoiceName);localStorage.setItem('aegis_voice_rate',String(aegisVoiceRate));localStorage.setItem('aegis_voice_pitch',String(aegisVoicePitch));aegisVoiceEngine=document.getElementById('voiceEngine').value||'system';aegisPiperExe=document.getElementById('piperExe').value.trim()||aegisPiperExe;aegisPiperModel=document.getElementById('piperModel').value.trim()||aegisPiperModel;aegisPiperModelHi=document.getElementById('piperModelHi').value.trim()||aegisPiperModelHi;aegisPiperLangMode=document.getElementById('piperLangMode').value||'auto';localStorage.setItem('aegis_voice_engine',aegisVoiceEngine);localStorage.setItem('aegis_piper_exe',aegisPiperExe);localStorage.setItem('aegis_piper_model',aegisPiperModel);localStorage.setItem('aegis_piper_model_hi',aegisPiperModelHi);localStorage.setItem('aegis_piper_lang_mode',aegisPiperLangMode);aegisSttEngine=document.getElementById('sttEngine').value||'auto';aegisSttModelEn=document.getElementById('sttModelEn').value.trim()||aegisSttModelEn;aegisSttModelHi=document.getElementById('sttModelHi').value.trim()||aegisSttModelHi;localStorage.setItem('aegis_stt_engine',aegisSttEngine);localStorage.setItem('aegis_stt_model_en',aegisSttModelEn);localStorage.setItem('aegis_stt_model_hi',aegisSttModelHi);}catch(e){}creoxRefreshStatus();renderStatus();say(t('settingsSaved')+document.getElementById('aiName').value);log('Settings saved (CreoX key value kabhi log nahi hoti)');};
 document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.getElementById('creoxBase').value.trim()||creoxBase;creoxKey=document.getElementById('creoxKey').value;testCreoxConnection();};
 document.getElementById('voiceSelect').onchange=function(){aegisVoiceName=this.value;};
 document.getElementById('voiceRate').oninput=function(){aegisVoiceRate=parseFloat(this.value)||0.95;document.getElementById('voiceRateVal').textContent=this.value;};
@@ -590,10 +671,22 @@ document.getElementById('piperTestHiBtn').onclick=function(){
     else{if(st)st.textContent=t('piperHindiTestFailPrefix')+r.error+t('piperHindiTestFailSuffix');log('Piper Hindi test fail ('+r.error+') — system voice fallback');speakClean(s,4000);}
   });
 };
+document.getElementById('sttTestBtn').onclick=function(){
+  var st=document.getElementById('sttStatus');var bridge=sttBridge();
+  if(!bridge){if(st)st.textContent=t('sttUnavailable');log('STT test: no Electron bridge (Chrome) — local STT needs the Electron app');return;}
+  if(st)st.textContent='Checking local STT setup… (Python + models)';
+  bridge.isAvailable((document.getElementById('sttModelEn').value.trim()||aegisSttModelEn), (document.getElementById('sttModelHi').value.trim()||aegisSttModelHi)).then(function(r){
+    var enEl=document.getElementById('sttModelEn');var hiEl=document.getElementById('sttModelHi');
+    var enOk=r&&r.en&&r.en.exists;var hiOk=r&&r.hi&&r.hi.exists;
+    var chosenOk=(replyLang()==='hi')?hiOk:enOk;
+    if(st)st.textContent=(r&&r.python&&chosenOk)?t('sttReady'):(t('sttNotReady')+' Python: '+(r&&r.python?'found':'MISSING')+'; English model: '+(enOk?'found':'MISSING')+'; Hindi model: '+(hiOk?'found':'MISSING')+'.');
+    log('STT test: python='+(r&&r.python)+', en model='+(enOk)+', hi model='+(hiOk));
+  }).catch(function(){if(st)st.textContent=t('sttNotReady');});
+};
 document.getElementById('voiceEngine').onchange=function(){aegisVoiceEngine=this.value;};
 document.getElementById('piperLangMode').onchange=function(){aegisPiperLangMode=this.value;};
-(function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;var pmh=document.getElementById('piperModelHi');if(pmh)pmh.value=aegisPiperModelHi;var plm=document.getElementById('piperLangMode');if(plm)plm.value=aegisPiperLangMode;populateVoices();})();
-log('AEGIS PRIME started — v0.7.3 PURELANG');if(aegisPiperLangMode==='hi'){say('नमस्ते! मैं AEGIS PRIME हूँ। "help" लिखो, या sidebar से MEMORY, SKILLS, CHARACTER, SETTING खोलो।');}else{say('Good morning! I am AEGIS PRIME. Type "help", or open MEMORY, SKILLS, CHARACTER, SETTING from the sidebar.');}
+(function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;var pmh=document.getElementById('piperModelHi');if(pmh)pmh.value=aegisPiperModelHi;var plm=document.getElementById('piperLangMode');if(plm)plm.value=aegisPiperLangMode;var se=document.getElementById('sttEngine');if(se)se.value=aegisSttEngine;var sme=document.getElementById('sttModelEn');if(sme)sme.value=aegisSttModelEn;var smh=document.getElementById('sttModelHi');if(smh)smh.value=aegisSttModelHi;populateVoices();})();
+log('AEGIS PRIME started — v0.8.0 LOCAL STT');if(aegisPiperLangMode==='hi'){say('नमस्ते! मैं AEGIS PRIME हूँ। "help" लिखो, या sidebar से MEMORY, SKILLS, CHARACTER, SETTING खोलो।');}else{say('Good morning! I am AEGIS PRIME. Type "help", or open MEMORY, SKILLS, CHARACTER, SETTING from the sidebar.');}
 </script>
 </body>
 </html>
