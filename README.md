@@ -1,3 +1,7 @@
+## v0.7.2 greeting (2026-10-27)
+
+Language-correct greetings: English mode/test buttons say 'Good morning, I am AEGIS PRIME...' in English; Hindi mode/test says 'Namaste' in Devanagari Hindi. Startup greeting follows the Language dropdown (Hindi always -> Namaste in Devanagari, otherwise Good Morning in English).
+
 # AEGIS PRIME — Personal AI HUD (v0.7.1 PIPER DUAL)
 
 ## v0.7.1 dual-model Piper voice — English wale English, Hindi wale Hindi

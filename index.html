@@ -478,13 +478,13 @@ document.getElementById('creoxTestBtn').onclick=function(){creoxBase=document.ge
 document.getElementById('voiceSelect').onchange=function(){aegisVoiceName=this.value;};
 document.getElementById('voiceRate').oninput=function(){aegisVoiceRate=parseFloat(this.value)||0.95;document.getElementById('voiceRateVal').textContent=this.value;};
 document.getElementById('voicePitch').oninput=function(){aegisVoicePitch=parseFloat(this.value)||1.05;document.getElementById('voicePitchVal').textContent=this.value;};
-document.getElementById('voiceTestBtn').onclick=function(){var s='Namaste, main AEGIS PRIME hoon. Ye meri nayi awaaz hai.';if(!speakClean(s,4000)){say('Voice is browser me supported nahi hai, isliye test nahi bol paya.');}else{log('Voice test played');}};
+document.getElementById('voiceTestBtn').onclick=function(){var s='Good morning, I am AEGIS PRIME. This is my new voice.';if(!speakClean(s,4000)){say('Voice is browser me supported nahi hai, isliye test nahi bol paya.');}else{log('Voice test played');}};
 if('speechSynthesis' in window){try{speechSynthesis.onvoiceschanged=populateVoices;}catch(e){}}
 setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN');},1000);
 renderMemory();renderStatus();
 (function(){var b=document.getElementById('creoxBase');if(b)b.value=creoxBase;var k=document.getElementById('creoxKey');if(k)k.value=creoxKey;var tg=document.getElementById('creoxBrainToggle');if(tg)tg.checked=creoxBrain;creoxRefreshStatus();})();
 document.getElementById('piperTestBtn').onclick=function(){
-  var s='Namaste, main AEGIS PRIME hoon. Ye meri Piper local awaaz hai.';
+  var s='Good morning, I am AEGIS PRIME. This is my Piper local voice.';
   var st=document.getElementById('piperStatus');
   if(!piperBridge()){if(st)st.textContent='Piper bridge nahi mila — Piper sirf Electron app me chalta hai, Chrome file-open me nahi. System voice se bol raha hoon.';log('Piper test: bridge nahi mila, system voice fallback');speakClean(s,4000);return;}
   if(st)st.textContent='Piper test chal raha hai… (pehli baar model load hone me thoda time lag sakta hai)';
@@ -506,7 +506,7 @@ document.getElementById('piperTestHiBtn').onclick=function(){
 document.getElementById('voiceEngine').onchange=function(){aegisVoiceEngine=this.value;};
 document.getElementById('piperLangMode').onchange=function(){aegisPiperLangMode=this.value;};
 (function(){var r=document.getElementById('voiceRate');if(r)r.value=aegisVoiceRate;var rv=document.getElementById('voiceRateVal');if(rv)rv.textContent=aegisVoiceRate;var pp=document.getElementById('voicePitch');if(pp)pp.value=aegisVoicePitch;var pv=document.getElementById('voicePitchVal');if(pv)pv.textContent=aegisVoicePitch;var ve=document.getElementById('voiceEngine');if(ve)ve.value=aegisVoiceEngine;var px=document.getElementById('piperExe');if(px)px.value=aegisPiperExe;var pm=document.getElementById('piperModel');if(pm)pm.value=aegisPiperModel;var pmh=document.getElementById('piperModelHi');if(pmh)pmh.value=aegisPiperModelHi;var plm=document.getElementById('piperLangMode');if(plm)plm.value=aegisPiperLangMode;populateVoices();})();
-log('AEGIS PRIME started — v0.7.1 PIPER DUAL');say('Namaste! Main AEGIS PRIME hoon. "help" likho, ya sidebar se MEMORY, SKILLS, CHARACTER, SETTING kholo.');
+log('AEGIS PRIME started — v0.7.2 GREETING');if(aegisPiperLangMode==='hi'){say('नमस्ते! मैं AEGIS PRIME हूँ। "help" लिखो, या sidebar से MEMORY, SKILLS, CHARACTER, SETTING खोलो।');}else{say('Good morning! I am AEGIS PRIME. Type "help", or open MEMORY, SKILLS, CHARACTER, SETTING from the sidebar.');}
 </script>
 </body>
 </html>
