@@ -20,6 +20,41 @@ A personal AI assistant dashboard inspired by the futuristic HUD in the "Stonic 
 1. Open `index.html`.
 2. Type `help`, then try: `time`, `calc 12*8`, `password check MyPass123`, `remember that my laptop is at repair`, `recall laptop`, `tip`, `system`.
 
+## Desktop app (Electron wrapper)
+
+The same `index.html` now also runs as a desktop app in its own window —
+no browser tab needed. `main.js` opens the HUD in an Electron window
+(Chromium), `package.json` is the app definition.
+
+### Run it on your laptop
+
+Requirements: Node.js LTS installed (`node --version` should print a
+version).
+
+```
+git clone https://github.com/Master-creox/aegis-prime.git
+cd aegis-prime
+npm install
+npm start
+```
+
+The AEGIS PRIME window should open with the same orb, panels, chat,
+memory and skills as the browser version. Voice (WAKE / LISTEN) uses the
+same browser speech APIs inside Electron — allow microphone access if
+asked.
+
+To build a Windows installer/executable:
+
+```
+npm run build
+```
+
+The output lands in `dist/`.
+
+Note: memory (facts/notes in localStorage) lives per app — facts saved in
+the browser version do not automatically appear in the desktop app, and
+vice versa. That is expected: nothing leaves the device either way.
+
 ## Honest limits (v0.1)
 
 - The brain is rule-based and runs fully in the browser — it is **not** a real LLM, and it does not do real threat scanning, real gesture control, or real device control. Those are future phases, not v0.1 claims.

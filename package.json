@@ -1,0 +1,16 @@
+{
+  "name": "aegis-prime",
+  "version": "0.1.0",
+  "description": "AEGIS PRIME — Personal AI HUD (desktop app, Electron wrapper around index.html)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "author": "Akash Kumar",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
