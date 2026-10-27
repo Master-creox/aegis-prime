@@ -1,91 +1,130 @@
-# AEGIS PRIME — Personal AI HUD (v0.6 VOICE)
+# AEGIS PRIME — Personal AI HUD (v0.7 PIPER)
 
-## v0.6 voice improvement (2026-10-27)
+## v0.7 local neural voice — Piper (free, offline, no key, no cost)
 
-Akash said the voice sounded very robotic. This version tackles that honestly —
-it does **not** claim to turn a system voice into a neural voice.
+Akash chose the **local** route for a less robotic voice, because it is
+free of cost. This version adds Piper — a small, CPU-only neural TTS
+engine — as a voice engine inside the **Electron app**. The v0.6 system
+voice picker, rate/pitch tuning, animated character, lip-sync, moods and
+the CreoX LLM brain are all unchanged.
 
-### Why the old voice sounded robotic
+### How it works (short version)
 
-The HUD speaks through the browser's built-in `SpeechSynthesis` voices — the
-voices installed on the machine / shipped with the browser. Those are
-formant-based system voices by design, so they sound flat and robotic
-compared with modern neural voices. No setting in this file can magically
-make a system voice neural. What v0.6 does is give Akash control to pick
-the **least robotic voice actually available on his machine** and tune it.
+1. Aegis speaks a reply.
+2. If the Voice Engine is **Piper local** and the app runs in Electron,
+   the renderer asks the preload bridge to generate audio.
+3. Electron's main process runs `piper.exe` (argument array, text piped
+   on stdin — never a shell string) and writes a WAV file to the OS temp
+   folder. The renderer plays that WAV, with lip-sync starting on audio
+   play and stopping on audio end.
+4. If anything fails — Piper not installed, model missing, generation
+   error, or the page was opened in Chrome (no bridge) — Aegis falls
+   back to the v0.6 system voice and logs the honest reason. It never
+   goes silent because Piper is missing.
 
-### What's new in v0.6
+### Laptop install steps (Akash does these on his own PC)
 
-- **Voice dropdown (SETTING panel):** populated at runtime from
-  `speechSynthesis.getVoices()`, with a `voiceschanged` handler, because
-  voices load asynchronously and are empty on first read in Chrome.
-- **Rate slider:** 0.7–1.2, step 0.05, default **0.95** (slightly slower
-  than 1.0 sounds less rushed and less robotic).
-- **Pitch slider:** 0.7–1.3, step 0.05, default **1.05** (a touch higher
-  than 1.0, less flat).
-- **Test Voice button:** speaks "Namaste, main AEGIS PRIME hoon. Ye meri
-  nayi awaaz hai." through the selected voice/rate/pitch, so Akash can
-  compare voices before saving.
-- **Auto-pick best default** when no voice is saved, by name matching
-  (never assuming a voice exists):
-  1. Google en-IN
-  2. Google en-US
-  3. Microsoft en-IN natural
-  4. Microsoft en-US natural
-  5. Microsoft en-IN
-  6. Microsoft en-US
-  7. Any en-IN
-  8. Any en-GB / en-US
-  9. First available voice / browser default
-- Voice name (`voiceURI`), rate and pitch are saved in localStorage
-  (`aegis_voice_name`, `aegis_voice_rate`, `aegis_voice_pitch`) via Save
-  Settings, and restored on startup. If the saved voice is missing on a
-  new machine, the auto-pick fallback is used instead of failing.
-- `say()` now routes speech through one `speakClean()` helper that sets
-  the selected voice, rate and pitch. Lip-sync start/stop wiring,
-  blinking, head movement, moods, the CreoX LLM brain, local skills and
-  memory are all unchanged from v0.5.1.
+**Step 1 — Piper binary download karo (ek baar):**
 
-### How to pick a good voice (laptop steps)
+1. Piper ke GitHub releases page par jao.
+2. `piper_windows_amd64.zip` download karo (frozen binary — isme
+   `piper.exe`, espeak-ng aur onnxruntime DLLs sab included hain).
+3. Zip ko apne Aegis app folder me unzip karo, taaki structure aisa ho:
+   ```
+   aegis-prime/
+     index.html
+     main.js
+     preload.js
+     piper/
+       piper.exe
+       ... (baaki DLLs/files)
+   ```
+4. Settings me Piper exe path waise hi rehne do: `piper/piper.exe`
+   (app folder se relative). Full path bhi chalega.
 
-1. `git pull`, then `npm start` (or open `index.html` in Chrome).
-2. Open the SETTING panel → Voice section.
-3. Try each voice with **Test Voice**. On most machines Chrome offers
-   better Google voices than Electron's system voices — if a voice
-   sounds robotic in Electron, try the same page in Chrome.
-4. Recommended starting settings: **rate 0.95, pitch 1.05**. Then adjust
-   in small steps (0.05 at a time) — big jumps sound worse, not better.
-5. Press **Save Settings** once you like a voice.
+**Step 2 — Voice model download karo (ek baar, per voice):**
+
+1. Hugging Face par `rhasspy/piper-voices` repo kholo.
+2. Ek voice ke liye **dono files** chahiye — sirf `.onnx` kaafi nahi:
+   - `en_US-lessac-medium.onnx` (~63 MB)
+   - `en_US-lessac-medium.onnx.json` (uski matching config)
+   Path pattern (repo me): `en/en_US/lessac/medium/`
+3. Dono files ko app folder me `voices/` me rakho:
+   ```
+   aegis-prime/
+     voices/
+       en_US-lessac-medium.onnx
+       en_US-lessac-medium.onnx.json
+   ```
+4. Settings me Piper model path waise hi rehne do:
+   `voices/en_US-lessac-medium.onnx`
+
+**Voice chunne se pehle samples suno:** `rhasspy.github.io/piper-samples`
+par har voice ka sample sun sakte ho — jo sabse natural lage, wahi model
+download karo. Default yahan `en_US-lessac-medium` rakha hai, kyunki ye
+Piper ki sabse commonly used English voice hai.
+
+**Hindi model ke baare me (honest note):** Piper ke catalog me ek Hindi
+voice bhi milti hai — `hi/hi_IN/pratham/medium` (files:
+`hi_IN-pratham-medium.onnx` + `.onnx.json`) — par ye **Hindi** hai,
+Indian English (en-IN) nahi. Hinglish text (Roman script) ko English
+model English pronunciation me padhega, aur Hindi model Devanagari text
+ke liye bana hai. Isliye: English/Hinglish replies ke liye English model
+se shuru karo, aur Hindi model ko alag se audition karke hi try karo.
+Koi en-IN Piper voice hone ka daava yahan nahi kiya gaya hai.
+
+**Step 3 — Settings me Piper on karo:**
+
+1. `git pull`, phir `npm start` (Electron app — Chrome me file khol kar
+   Piper nahi chalega, kyunki Chrome koi local program nahi chala sakta).
+2. SETTING panel → Voice Engine: **Piper local — Electron only** chuno.
+3. Piper exe path aur model path check karo (defaults upar wale hain).
+4. **Save Settings** dabao.
+5. **Test Piper Voice** dabao.
+   - OK aaya → local neural voice chal rahi hai.
+   - Fail aaya → status line me wajah dikhegi (exe nahi mila / model
+     nahi mila / .onnx.json nahi mili) — usko theek karo, phir test karo.
+     Tab tak replies system voice se bolenge.
+
+### What is NOT committed to GitHub (by design)
+
+`.gitignore` me ye sab blocked hai, taaki repo halka rahe aur koi bada
+binary galti se push na ho:
+
+- `piper/` — Piper binary + DLLs
+- `voices/` — saare voice models
+- `*.wav` — generated audio
+- `*.onnx`, `*.onnx.json` — voice model files
+
+GitHub par sirf code jayega (`index.html`, `main.js`, `preload.js`,
+`package.json`, README). Piper aur models Akash apne laptop par alag se
+install karega, upar wale steps se.
 
 ### Known limits (honest)
 
-- **Electron voice may still fail.** The known Electron limitation is
-  unchanged: speech upload can fail with Error -2 in Electron, while
-  Chrome voice usually works. Typing works fully in both.
-- **This is still a system voice.** Even the best available system
-  voice will not sound like a human or like a neural assistant voice.
-- **Truly natural voice = later phase, not built here.** Two real
-  options, both need extra setup:
-  - **Cloud neural TTS** (e.g. Google Cloud TTS / similar): natural
-    voices, but needs an API key and has a cost — the key must live
-    in-app only, never in the repo.
-  - **Local neural TTS on the laptop** (e.g. Piper): private, no key
-    and no cost, but needs a laptop install and a voice model download.
-  Neither is included in v0.6; Akash can pick one as the next voice phase.
+- **Piper neural hai, par halka model hai** — ye bade cloud voices
+  (jaise ElevenLabs/Google neural) jitna natural nahi lagega, par system
+  voices se clearly behtar hai. Yehi free/offline ka trade-off hai.
+- **Pehli generation slow ho sakti hai** — model load hone me kuch
+  seconds lagte hain; uske baad replies tez aate hain. Timeout 60
+  seconds rakha hai.
+- **Hinglish text** English model se English pronunciation me bolega —
+  Hindi shabdon ka uchcharan perfect nahi hoga.
+- **Electron only** — Chrome me `index.html` khol kar Piper mode kaam
+  nahi karega; wahan system voice fallback chalega. Electron ki purani
+  voice limitation (speech upload Error -2) Piper mode par lagu nahi
+  hoti, kyunki Piper local audio banata hai, cloud speech service use
+  nahi karta.
+- **Lip-sync rhythm-based hai** — mouth audio ke saath khulta-band
+  hota hai, phoneme-perfect visemes nahi hain.
+- Live GUI test laptop par hi hoga — Akash ka screenshot/sunna hi final
+  check hai.
 
-### v0.5.1 fix (kept from the previous version)
+### Files in this version
 
-" What is ...?" questions were treated as local memory lookups, so they
-never reached the CreoX brain. Now: if the question matches a saved
-local fact, memory answers first; otherwise the question goes to the
-CreoX brain when it is ON. Test with "What is phishing?" — it should
-reply "via CreoX brain".
-
-### v0.5 LLM (kept)
-
-Real brain via Akash's own Master CreoX API
-(`POST /api/v1/chat/completions`, model `creox`). The HUD key is a
-dedicated chat-scoped key saved only in localStorage — never the admin
-key, never hardcoded. Local skills and memory run first; the API is for
-open questions, with a rule-based fallback on 401/429/timeout
-(90-second timeout covers Render free-service sleep).
+- `index.html` — v0.7 HUD (v0.6 voice + v0.5.1 LLM brain + Piper engine)
+- `main.js` — Electron wrapper + Piper IPC handlers (`piper-speak`,
+  `piper-available`)
+- `preload.js` — contextBridge: `window.aegisPiper = { speak, isAvailable }`
+- `package.json` — version 0.7.0, Electron wrapper (koi naya dependency nahi)
+- `.gitignore` — piper/, voices/, *.wav, *.onnx, *.onnx.json

@@ -1,2 +1,8 @@
 node_modules/
 dist/
+# Piper local voice — binaries and models are installed on the laptop, never committed
+piper/
+voices/
+*.wav
+*.onnx
+*.onnx.json
